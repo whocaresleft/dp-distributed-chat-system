@@ -1,5 +1,167 @@
+/*
+ * Copyright (c) 2026 Francesco Biribo'
+ *
+ * Permission to use, copy, modify, and distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 package topology
 
+import (
+	"fmt"
+	"net"
+	"server/cluster/connection"
+	"server/cluster/node"
+	"strconv"
+)
+
+// A TopologyManager is a component of a node that handles its local view inside the cluster's network.
 type TopologyManager struct {
-	Neighbors map[uint]string
+	neighbors         map[node.NodeId]string        // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
+	connectionManager *connection.ConnectionManager // Handles the connections between this node and the neighbors
+}
+
+// Checks if the given string is a valid address, that is, formatted as `<ip-address>:<port-number>`.
+func validateAddressString(address string) error {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return fmt.Errorf("Address string is mal-formatted: {%s}", address)
+	}
+
+	if net.ParseIP(host) == nil {
+		return fmt.Errorf("The Host (%s) is not valid", host)
+	}
+
+	intPort, err := strconv.Atoi(port)
+	if err != nil {
+		return fmt.Errorf("The port, %s, is not a valid number", port)
+	}
+
+	return node.IsPortValid(intPort)
+}
+
+// Creates a topology manager with an empty map.
+func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
+
+	connMan, err := connection.NewConnectionManager(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TopologyManager{
+			make(map[node.NodeId]string),
+			connMan,
+		},
+		nil
+}
+
+// Adds the pair (node_id, address) to the neighbors.
+// This only works if the neighbor is not already present and the address must be properly formatted as `<ip-address>:<port-number>`.
+func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
+	if t.Exists(neighbor) {
+		return fmt.Errorf("The ID %d corresponds to an already present neighbor, to replace use .Replace()", neighbor)
+	}
+
+	if err := validateAddressString(address); err != nil {
+		return err
+	}
+
+	if err := t.connectionManager.ConnectTo(address); err != nil {
+		return err
+	}
+
+	t.neighbors[neighbor] = address
+	return nil
+}
+
+// Replaces the address of the given node id with the new one.
+// This only works if the neighbor is already present and the address must be properly formatted as `<ip-address>:<port-number>`.
+func (t *TopologyManager) Replace(neighbor node.NodeId, address string) error {
+	if !t.Exists(neighbor) {
+		return fmt.Errorf("The ID %d does not correspond to any neighbor, to add it use .Add()", neighbor)
+	}
+
+	if err := validateAddressString(address); err != nil {
+		return err
+	}
+
+	if err := t.connectionManager.SwitchAddress(t.neighbors[neighbor], address); err != nil {
+		return err
+	}
+
+	t.neighbors[neighbor] = address
+	return nil
+}
+
+// Removes the address of the neighbor with given id.
+// It return an error when the node was not present.
+func (t *TopologyManager) Remove(neighbor node.NodeId) error {
+	if !t.Exists(neighbor) {
+		return fmt.Errorf("The ID %d does not correspond to any neighbor, can't proceed to deletion", neighbor)
+	}
+
+	if err := t.connectionManager.DisconnectFrom(t.neighbors[neighbor]); err != nil {
+		return err
+	}
+
+	delete(t.neighbors, neighbor)
+	return nil
+}
+
+// Returns the address of the neighbor with given id.
+// It return (address, nil) if the neighbor is present, and (nil, error) otherwise.
+func (t *TopologyManager) Get(neighbor node.NodeId) (string, error) {
+	node, ok := t.neighbors[neighbor]
+	if !ok {
+		return "", fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
+	}
+	return node, nil
+}
+
+// Checks whether there exists a neighbor with the given id.
+func (t *TopologyManager) Exists(neighbor node.NodeId) bool {
+	_, ok := t.neighbors[neighbor]
+	return ok
+}
+
+// Returns the number of neighbors.
+func (t *TopologyManager) Length() int {
+	return len(t.neighbors)
+}
+
+// Returns true when there is at least one neighbor.
+// It internally calls .Length() and checks if it's greater than zero.
+func (t *TopologyManager) HasNeighbors() bool {
+	return t.Length() > 0
+}
+
+// Returns true when there are no neighbors.
+// It internally calls .Length() and checks if it's equal to zero.
+func (t *TopologyManager) IsDisconnected() bool {
+	return t.Length() == 0
+}
+
+// Creates a list with the IDs of all neighbors
+func (t *TopologyManager) NeighborList() []node.NodeId {
+	list := make([]node.NodeId, t.Length())
+	for id, _ := range t.neighbors {
+		list = append(list, id)
+	}
+	return list
+}
+
+func (t *TopologyManager) SendTo(neighbor node.NodeId, payload []byte) error {
+	if !t.Exists(neighbor) {
+		return fmt.Errorf("Node %d is not a neighbor", neighbor)
+	}
+	return t.connectionManager.SendTo(connection.Identifier(neighbor), payload)
+}
+
+func (t *TopologyManager) Recv() (string, []string, error) {
+	return t.connectionManager.Recv()
+}
+
+func (t *TopologyManager) Destroy() {
+	t.connectionManager.Destroy()
 }

@@ -2,7 +2,10 @@ module server
 
 go 1.25.5
 
-require gorm.io/gorm v1.25.12
+require (
+	github.com/pebbe/zmq4 v1.2.10
+	gorm.io/gorm v1.25.12
+)
 
 require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
