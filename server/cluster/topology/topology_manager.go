@@ -16,9 +16,18 @@ import (
 	"strconv"
 )
 
+type Status bool
+
+const (
+	On  Status = true
+	Off Status = false
+)
+
 // A TopologyManager is a component of a node that handles its local view inside the cluster's network.
 type TopologyManager struct {
+	id                int
 	neighbors         map[node.NodeId]string        // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
+	neighborsStatus   map[node.NodeId]Status        // Map of the status of neighbors, for each neighbor it reports either 'On' or 'Off'
 	connectionManager *connection.ConnectionManager // Handles the connections between this node and the neighbors
 }
 
@@ -49,11 +58,16 @@ func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
 		return nil, err
 	}
 
-	return &TopologyManager{
-			make(map[node.NodeId]string),
-			connMan,
-		},
-		nil
+	t := &TopologyManager{
+		int(config.Id),
+		make(map[node.NodeId]string),
+		make(map[node.NodeId]Status),
+		connMan,
+	}
+
+	t.connectionManager.StartMonitoring(t.markOk, t.markOff)
+
+	return t, nil
 }
 
 // Adds the pair (node_id, address) to the neighbors.
@@ -72,12 +86,13 @@ func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
 	}
 
 	t.neighbors[neighbor] = address
+	t.neighborsStatus[neighbor] = Off
 	return nil
 }
 
 // Replaces the address of the given node id with the new one.
 // This only works if the neighbor is already present and the address must be properly formatted as `<ip-address>:<port-number>`.
-func (t *TopologyManager) Replace(neighbor node.NodeId, address string) error {
+func (t *TopologyManager) replace(neighbor node.NodeId, address string) error {
 	if !t.Exists(neighbor) {
 		return fmt.Errorf("The ID %d does not correspond to any neighbor, to add it use .Add()", neighbor)
 	}
@@ -91,6 +106,7 @@ func (t *TopologyManager) Replace(neighbor node.NodeId, address string) error {
 	}
 
 	t.neighbors[neighbor] = address
+	t.neighborsStatus[neighbor] = Off
 	return nil
 }
 
@@ -106,6 +122,7 @@ func (t *TopologyManager) Remove(neighbor node.NodeId) error {
 	}
 
 	delete(t.neighbors, neighbor)
+	delete(t.neighborsStatus, neighbor)
 	return nil
 }
 
@@ -117,6 +134,46 @@ func (t *TopologyManager) Get(neighbor node.NodeId) (string, error) {
 		return "", fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
 	}
 	return node, nil
+}
+
+// Returns the status of the neighbor with given id.
+// It returns (On/Off, nil) if the neighbor is present, and (Off, error) otherwise.
+func (t *TopologyManager) GetStatus(neighbor node.NodeId) (Status, error) {
+	status, ok := t.neighborsStatus[neighbor]
+	if !ok {
+		return Off, fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
+	}
+	return status, nil
+}
+
+// Returns the ID of the neighbor with the given address.
+// It returns (id, nil) if the neighbor is present, and (0, error) otherwise.
+func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error) {
+	for k, v := range t.neighbors {
+		if v == neighborAddr {
+			return k, nil
+		}
+	}
+	return 0, fmt.Errorf("There is no neighbor with address %s", neighborAddr)
+}
+
+func (t *TopologyManager) markOff(neighborAddr string) {
+	id, err := t.getByAddress(neighborAddr)
+	if err != nil {
+		return
+	}
+	if t.neighborsStatus[id] == On {
+		t.neighborsStatus[id] = Off
+	}
+}
+func (t *TopologyManager) markOk(neighborAddr string) {
+	id, err := t.getByAddress(neighborAddr)
+	if err != nil {
+		return
+	}
+	if t.neighborsStatus[id] == Off {
+		t.neighborsStatus[id] = On
+	}
 }
 
 // Checks whether there exists a neighbor with the given id.
@@ -145,7 +202,7 @@ func (t *TopologyManager) IsDisconnected() bool {
 // Creates a list with the IDs of all neighbors
 func (t *TopologyManager) NeighborList() []node.NodeId {
 	list := make([]node.NodeId, t.Length())
-	for id, _ := range t.neighbors {
+	for id := range t.neighbors {
 		list = append(list, id)
 	}
 	return list
@@ -158,8 +215,16 @@ func (t *TopologyManager) SendTo(neighbor node.NodeId, payload []byte) error {
 	return t.connectionManager.SendTo(connection.Identifier(neighbor), payload)
 }
 
-func (t *TopologyManager) Recv() (string, []string, error) {
-	return t.connectionManager.Recv()
+func (t *TopologyManager) Recv() (sender node.NodeId, contents [][]byte, err error) {
+	payload, err := t.connectionManager.Recv()
+	if err != nil {
+		return 0, [][]byte{}, err
+	}
+	sender, err = connection.ExtractIdentifier(payload[0])
+	if err != nil {
+		return 0, [][]byte{}, err
+	}
+	return sender, payload[2:], err
 }
 
 func (t *TopologyManager) Destroy() {

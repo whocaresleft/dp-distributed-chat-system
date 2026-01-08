@@ -23,6 +23,8 @@ const (
 	Source ElectionStatus = iota
 	InternalNode
 	Sink
+	Lost
+	Leader
 )
 
 ////////////////////////////////////////////////
@@ -31,6 +33,6 @@ type ElectionState uint8
 
 const (
 	Idle ElectionState = iota
-	YoDown
-	YoUp
+	WaitingYoDown
+	WaitingYoUp
 )

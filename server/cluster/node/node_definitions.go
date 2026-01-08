@@ -10,7 +10,7 @@ package node
 
 import "fmt"
 
-type NodeId uint
+type NodeId uint64
 
 var MinimumValidPort int = 41952
 var MaximumValidPort int = 65535

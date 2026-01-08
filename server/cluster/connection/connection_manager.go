@@ -9,23 +9,35 @@
 package connection
 
 import (
+	"bytes"
 	"fmt"
 	"server/cluster/node"
+	"strconv"
+	"strings"
 
 	zmq "github.com/pebbe/zmq4"
 )
 
-// A Connection manager is the node's component that handles communication with other nodes in the system.
-// It handles election messages, heartbeat (post election) messages and request forwarding
-type ConnectionManager struct {
-	electionSocket *zmq.Socket
-}
-
 func getFullAddress(address string) string {
 	return fmt.Sprintf("tcp://%s", address)
 }
+func removePrefix(fullAddress string) string {
+	return strings.Split(fullAddress, "//")[1]
+}
+
 func Identifier(id node.NodeId) string {
 	return fmt.Sprintf("node-%d", id)
+}
+func ExtractIdentifier(frame []byte) (node.NodeId, error) {
+	numBytes := bytes.TrimPrefix(frame, []byte("node-"))
+	id, err := strconv.Atoi(string(numBytes))
+	return node.NodeId(id), err
+}
+
+// A Connection manager is the node's component that handles communication with other nodes in the system.
+// It handles election messages, heartbeat (post election) messages and request forwarding
+type ConnectionManager struct {
+	socket *zmq.Socket
 }
 
 // Creates a connection manager setting the identity with the given config.
@@ -43,18 +55,45 @@ func NewConnectionManager(node node.NodeConfig) (*ConnectionManager, error) {
 	}
 
 	if err = r.Bind(fmt.Sprintf("tcp://*:%d", nodePort)); err != nil {
-		return nil, fmt.Errorf("Could not bind the socket on port %d for node %d", nodePort)
+		return nil, fmt.Errorf("Could not bind the socket on port %d for node %d", nodePort, nodeId)
 	}
 
 	r.SetRouterHandover(true)
-
 	return &ConnectionManager{r}, nil
+}
+
+func (c *ConnectionManager) StartMonitoring(connectCallback, disconnectCallback func(string)) {
+	monitorAddress := fmt.Sprintf("inproc://monitor-socket-%s", c.GetIdentity())
+	c.socket.Monitor(monitorAddress, zmq.EVENT_ACCEPTED|zmq.EVENT_CONNECTED|zmq.EVENT_DISCONNECTED|zmq.EVENT_CLOSED|zmq.EVENT_CONNECT_RETRIED|zmq.EVENT_HANDSHAKE_SUCCEEDED)
+	monitorSocket, _ := zmq.NewSocket(zmq.Type(zmq.PAIR))
+	monitorSocket.Connect(monitorAddress)
+
+	go func() {
+		defer monitorSocket.Close()
+		for {
+			event, addr, _, err := monitorSocket.RecvEvent(0)
+			if err != nil {
+				break
+			}
+			switch event {
+			case zmq.EVENT_CONNECTED, zmq.EVENT_ACCEPTED, zmq.EVENT_HANDSHAKE_SUCCEEDED:
+				connectCallback(removePrefix(addr))
+			case zmq.EVENT_DISCONNECTED, zmq.EVENT_CLOSED:
+				disconnectCallback(removePrefix(addr))
+			}
+		}
+	}()
+}
+
+func (c *ConnectionManager) GetIdentity() string {
+	i, _ := c.socket.GetIdentity()
+	return i
 }
 
 func (c *ConnectionManager) ConnectTo(address string) error {
 	fullAddr := getFullAddress(address)
 
-	err := c.electionSocket.Connect(fullAddr)
+	err := c.socket.Connect(fullAddr)
 	if err != nil {
 		return fmt.Errorf("Could not connect to %s", address)
 	}
@@ -64,7 +103,7 @@ func (c *ConnectionManager) ConnectTo(address string) error {
 func (c *ConnectionManager) DisconnectFrom(address string) error {
 	fullAddr := getFullAddress(address)
 
-	err := c.electionSocket.Disconnect(fullAddr)
+	err := c.socket.Disconnect(fullAddr)
 	if err != nil {
 		return fmt.Errorf("Could not disconnect from %s", address)
 	}
@@ -83,19 +122,17 @@ func (c *ConnectionManager) SwitchAddress(old, new string) error {
 }
 
 func (c *ConnectionManager) SendTo(id string, payload []byte) error {
-	_, err := c.electionSocket.SendMessage(id, "", payload)
+	_, err := c.socket.SendMessage(id, "", payload)
 	if err != nil {
 		return fmt.Errorf("Error during send message to %s", id)
 	}
 	return nil
 }
 
-func (c *ConnectionManager) Recv() (string, []string, error) {
-	strings, err := c.electionSocket.RecvMessage(0)
-
-	return strings[0], strings[1:], err
+func (c *ConnectionManager) Recv() ([][]byte, error) {
+	return c.socket.RecvMessageBytes(0)
 }
 
 func (c *ConnectionManager) Destroy() {
-	c.electionSocket.Close()
+	c.socket.Close()
 }
