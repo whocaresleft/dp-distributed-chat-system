@@ -65,9 +65,8 @@ func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
 		connMan,
 	}
 
-	fmt.Println("Created topology manager for %d\n", config.Id)
-	t.connectionManager.StartMonitoring(t.markOn, t.markOff)
-	fmt.Println("Started monitoring the connection manager")
+	//t.connectionManager.StartMonitoring(t.markOn, t.markOff)
+	t.connectionManager.StartMonitoring(func(string) {}, func(string) {})
 
 	return t, nil
 }
@@ -87,9 +86,13 @@ func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
 		return err
 	}
 
+	t.LogicalAdd(neighbor, address)
+	return nil
+}
+
+func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address string) {
 	t.neighbors[neighbor] = address
 	t.neighborsStatus[neighbor] = Off
-	return nil
 }
 
 // Replaces the address of the given node id with the new one.
@@ -206,8 +209,11 @@ func (t *TopologyManager) IsDisconnected() bool {
 // Creates a list with the IDs of all neighbors
 func (t *TopologyManager) NeighborList() []node.NodeId {
 	list := make([]node.NodeId, t.Length())
-	for id := range t.neighbors {
-		list = append(list, id)
+
+	idx := 0
+	for id, _ := range t.neighbors {
+		list[idx] = id
+		idx++
 	}
 	return list
 }

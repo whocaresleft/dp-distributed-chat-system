@@ -57,6 +57,12 @@ func NewRoundContext(epoch uint) *roundContext {
 	}
 }
 
+func (e *ElectionContext) setupNewRound(epoch uint) {
+	e.currentRound.setupNewRound(epoch)
+	e.currentRound.awaitedProposals = e.InNodesCount()
+	e.currentRound.awaitedVotes = e.OutNodesCount()
+}
+
 func (r *roundContext) setupNewRound(epoch uint) {
 	r.epoch = epoch
 	r.smallestId = node.NodeId(^uint64(0))
@@ -119,22 +125,27 @@ func (e *ElectionContext) GetAllVotes() map[node.NodeId]bool {
 }
 
 func (e *ElectionContext) FirstRound() {
-	e.currentRound.setupNewRound(0)
+	e.setupNewRound(0)
 }
 
 func (e *ElectionContext) prune() {
+	fmt.Printf("I am pruning the following links: ")
 	for _, id := range e.currentRound.pruneList {
+		fmt.Printf("%d ", id)
 		e.Remove(id)
 	}
+	fmt.Printf("\n")
 }
 
 func (e *ElectionContext) NextRound() {
 	e.updateLinks()
 	e.prune()
-	e.updateStatus()
+	e.UpdateStatus()
+
+	fmt.Printf("My new status is %v\n", e.status)
 
 	nextRound := e.CurrentRound() + 1
-	e.currentRound.setupNewRound(nextRound)
+	e.setupNewRound(nextRound)
 
 	futureContext, ok := e.futureRounds[nextRound]
 	if !ok {
@@ -213,7 +224,7 @@ func (e *ElectionContext) GetOrientation(id node.NodeId) (LinkDirection, error) 
 	return e.linksOrientation[id], nil
 }
 
-func (e *ElectionContext) updateStatus() {
+func (e *ElectionContext) UpdateStatus() {
 
 	oldStatus := e.status
 
@@ -267,10 +278,12 @@ func (e *ElectionContext) updateLinks() {
 }
 
 func (e *ElectionContext) DetermineVote(proposerId node.NodeId) (bool, error) {
+	fmt.Printf("Lets retreive %d's proposal\n", proposerId)
 	propose, err := e.RetrieveProposal(proposerId)
 	if err != nil {
 		return false, err
 	}
+	fmt.Printf("I got this propose: %d from %d. Smallest is %d\n", propose, proposerId, e.currentRound.smallestId)
 	return e.currentRound.smallestId == propose, nil
 }
 
@@ -280,10 +293,12 @@ func (e *ElectionContext) StoreProposal(sender node.NodeId, proposed node.NodeId
 	}
 
 	_, err := e.RetrieveProposal(sender)
-	if err != nil {
-		return err
+	if err == nil {
+		return fmt.Errorf("Can't store, %d already proposed", sender)
 	}
+
 	e.currentRound.awaitedProposals--
+	fmt.Printf("I need %d ore proposals\n", e.currentRound.awaitedProposals)
 	e.currentRound.receivedProposals[sender] = proposed
 	if proposed < e.currentRound.smallestId {
 		e.currentRound.smallestId = proposed
@@ -353,8 +368,8 @@ func (e *ElectionContext) StoreVote(sender node.NodeId, vote bool) error {
 	}
 
 	_, err := e.RetrieveVote(sender)
-	if err != nil {
-		return err
+	if err == nil {
+		return fmt.Errorf("Can't store, %d already voted", sender)
 	}
 
 	e.currentRound.awaitedVotes--
@@ -375,7 +390,7 @@ func (e *ElectionContext) ReceivedAllProposals() bool {
 	return e.currentRound.awaitedProposals == 0
 }
 
-func (e *ElectionContext) ReceivecAllVotes() bool {
+func (e *ElectionContext) ReceivedAllVotes() bool {
 	return e.currentRound.awaitedVotes == 0
 }
 
@@ -444,11 +459,14 @@ func (e *ElectionContext) Nodes() ([]node.NodeId, []node.NodeId) {
 	inNodes := make([]node.NodeId, e.InNodesCount())
 	outNodes := make([]node.NodeId, e.OutNodesCount())
 
+	in, out := 0, 0
 	for id, orientation := range e.linksOrientation {
 		if orientation == Incoming {
-			inNodes = append(inNodes, id)
+			inNodes[in] = id
+			in++
 		} else {
-			outNodes = append(outNodes, id)
+			outNodes[out] = id
+			out++
 		}
 	}
 	return inNodes, outNodes
