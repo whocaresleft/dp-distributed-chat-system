@@ -11,7 +11,9 @@ package cluster
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"server/cluster/connection"
 	"server/cluster/election"
 	"server/cluster/node"
@@ -30,9 +32,8 @@ type ClusterNode struct {
 	treeMan         *topology.TreeManager
 
 	messageDispatcher map[protocol.MessageType](chan *protocol.Message)
+	logger            *log.Logger
 }
-
-func (c *ClusterNode) GT() *topology.TopologyManager { return c.topologyMan }
 
 func NewClusterNode(id node.NodeId, port uint16) (*ClusterNode, error) {
 	config, err := node.NewNodeConfig(id, int(port))
@@ -54,7 +55,9 @@ func NewClusterNode(id node.NodeId, port uint16) (*ClusterNode, error) {
 	dispatcher[protocol.ElectionVote] = electionInbox
 	dispatcher[protocol.ElectionLeader] = electionInbox
 
-	fmt.Printf("Created dispatcher and assigned election messages for node %d\n", id)
+	logOut, _ := os.OpenFile(fmt.Sprintf("%d.log", id), os.O_TRUNC|os.O_CREATE|os.O_WRONLY, 0666)
+	logger := log.New(logOut, fmt.Sprintf("[[Node %d]]: ", id), log.Ldate|log.Ltime|log.Lshortfile)
+	logger.Printf("Created dispatcher and assigned election messages\n")
 
 	return &ClusterNode{
 		config,
@@ -63,6 +66,7 @@ func NewClusterNode(id node.NodeId, port uint16) (*ClusterNode, error) {
 		nil,
 		topology.NewTreeManager(),
 		dispatcher,
+		logger,
 	}, nil
 }
 
@@ -103,7 +107,7 @@ func (n *ClusterNode) SendToNeighbor(id node.NodeId, message *protocol.Message) 
 		return err
 	}
 	n.topologyMan.SendTo(id, payload)
-	fmt.Printf("Sent to %d, %v\n", id, *message)
+	n.logger.Printf("Sent to %d, %v\n", id, *message)
 	return nil
 }
 
@@ -227,15 +231,15 @@ func (n *ClusterNode) getElectionStatus() election.ElectionStatus {
 }
 
 func (n *ClusterNode) ElectionHandle() {
-	fmt.Printf("%d: Election routine stard\n", n.getId())
+	n.logger.Printf("Election routine stard\n")
 	n.electionCtx.SwitchToState(election.Idle)
 
 	for {
 
-		fmt.Printf("%d: Waiting for election message\n", n.getId())
+		n.logger.Printf("Waiting for election message\n")
 		message := n.RecvElectionMessage()
 
-		fmt.Printf("%d: Received %v on round %d. Also my state is %v\n", n.getId(), *message, n.electionCtx.CurrentRound(), n.getElectionState())
+		n.logger.Printf("Received %v on round %d. Also my state is %v\n", *message, n.electionCtx.CurrentRound(), n.getElectionState())
 		switch n.getElectionState() {
 
 		case election.Idle:
@@ -259,12 +263,12 @@ func (n *ClusterNode) handleIdleState(message *protocol.Message) {
 		// The neighbor was added, time to start the election
 
 		n.ElectionSetup()
-		fmt.Printf("%d: Election context set up perfectly\n", n.getId())
+		n.logger.Printf("Election context set up perfectly\n")
 		n.electionCtx.SetStartReceived()
 		for _, neighbor := range n.neighborList() {
 			n.SendToNeighbor(neighbor, n.newStartMessage(neighbor))
 		}
-		fmt.Printf("%d: Mandato start ai vicini, comincio YODOWN\n", n.getId())
+		n.logger.Printf("Mandato start ai vicini, comincio YODOWN\n")
 		n.enterYoDown()
 
 	case protocol.ElectionStart: // A node sent START because a neighbor received JOIN or START
@@ -275,20 +279,20 @@ func (n *ClusterNode) handleIdleState(message *protocol.Message) {
 
 		n.electionCtx.SetStartReceived()
 		n.ElectionSetup()
-		fmt.Printf("%d: Election context set up perfectly\n", n.getId())
+		n.logger.Printf("Election context set up perfectly\n")
 		for _, neighbor := range n.neighborList() {
 			if neighbor == sender {
 				continue
 			}
 			n.SendToNeighbor(neighbor, n.newStartMessage(neighbor))
 		}
-		fmt.Printf("%d: I too have received START, i forwarded it to my neighbors, but sender, and i start yo down\n", n.getId())
+		n.logger.Printf("I too have received START, i forwarded it to my neighbors, but sender, and i start yo down\n")
 		n.enterYoDown()
 
 	case protocol.ElectionLeader:
 		n.handleLeaderMessage(message)
 	default:
-		fmt.Printf("TO BE HANDLED")
+		n.logger.Printf("TO BE HANDLED (IDLE)\n")
 	}
 }
 
@@ -299,7 +303,7 @@ func (n *ClusterNode) handleLeaderMessage(message *protocol.Message) {
 	sender, _ := connection.ExtractIdentifier([]byte(message.Sender))
 	leaderId, _ := strconv.ParseUint(message.Body[0], 10, 64)
 	n.endElection(node.Follower, node.NodeId(leaderId))
-	fmt.Printf("I ended the election: Leader is: %d", leaderId)
+	n.logger.Printf("I ended the election: Leader is: %d\n", leaderId)
 	for _, neighbor := range n.neighborList() {
 		if neighbor == sender {
 			continue
@@ -321,7 +325,7 @@ func (n *ClusterNode) handleWaitingYoDown(message *protocol.Message) {
 			n.electionCtx.StashFutureProposal(sender, node.NodeId(proposed), message.Round)
 			return
 		}
-		fmt.Printf("%d: I have received the proposal: %d", n.getId(), proposed)
+		n.logger.Printf("I have received the proposal: %d\n", proposed)
 
 		switch n.electionCtx.GetStatus() {
 
@@ -331,7 +335,7 @@ func (n *ClusterNode) handleWaitingYoDown(message *protocol.Message) {
 			if !n.electionCtx.ReceivedAllProposals() {
 				return
 			}
-			fmt.Printf("%d: I have received ALL!", n.getId())
+			n.logger.Printf("I have received ALL!\n")
 
 			smallestId := n.electionCtx.GetSmallestId()
 
@@ -346,20 +350,19 @@ func (n *ClusterNode) handleWaitingYoDown(message *protocol.Message) {
 			if !n.electionCtx.ReceivedAllProposals() {
 				return
 			}
-			fmt.Printf("%d: I have received ALL!", n.getId())
+			n.logger.Printf("I have received ALL!\n")
 
 		case election.Source:
 			// Nothing, sources don't wait on YoDown
 		}
 
-		fmt.Printf("My yo down is done! I can enter yo up\n")
+		n.logger.Printf("My yo down is done! I can enter yo up\n")
 		n.enterYoUp()
 	case protocol.ElectionLeader:
-		fmt.Printf("YO\n")
 		n.handleLeaderMessage(message)
 
 	default:
-		fmt.Printf("TO BE HANDLED")
+		n.logger.Printf("TO BE HANDLED (YO DOWN)\n")
 	}
 }
 
@@ -370,7 +373,7 @@ func (n *ClusterNode) handleWaitingYoUp(message *protocol.Message) {
 		vote := (message.Body[0] == "YES")
 		pruneChild, _ := strconv.ParseBool(message.Body[1])
 
-		fmt.Printf("%d: I have received the vote: %d, %v, %v", n.getId(), sender, vote, pruneChild)
+		n.logger.Printf("I have received the vote: %d, %v, %v\n", sender, vote, pruneChild)
 
 		currentRound := n.electionCtx.CurrentRound()
 		if message.Round < currentRound {
@@ -385,14 +388,16 @@ func (n *ClusterNode) handleWaitingYoUp(message *protocol.Message) {
 		case election.InternalNode: // We need to gather all votes from out neighbors, since we already received a message, update the round context
 			n.electionCtx.StoreVote(sender, vote)
 			if pruneChild {
+				fmt.Printf("%d sent %v\n", sender, pruneChild)
 				n.electionCtx.PruneThisRound(sender)
+				fmt.Printf("Added to pruine list\n")
 			}
 
 			if !n.electionCtx.ReceivedAllVotes() {
 				return
 			}
 
-			fmt.Printf("%d, I have received all votes\n", n.getId())
+			n.logger.Printf("%d, I have received all votes\n", n.getId())
 
 			// Check if every in node sent the same ID
 			pruneMe := true
@@ -418,7 +423,9 @@ func (n *ClusterNode) handleWaitingYoUp(message *protocol.Message) {
 
 		case election.Source:
 			n.electionCtx.StoreVote(sender, vote)
+			fmt.Printf("%d sent %v\n", sender, pruneChild)
 			if pruneChild {
+				fmt.Printf("Added to pruine list\n")
 				n.electionCtx.PruneThisRound(sender)
 			}
 
@@ -426,67 +433,67 @@ func (n *ClusterNode) handleWaitingYoUp(message *protocol.Message) {
 				return
 			}
 
-			fmt.Printf("%d, I have received all votes\n", n.getId())
+			n.logger.Printf("I have received all votes\n")
 
 		case election.Sink:
 			// Nothing, sinks don't wait on YoUP
 		}
 
-		fmt.Printf("%d: My roudn is done\n", n.getId())
+		n.logger.Printf("My roudn is done\n")
 		n.electionCtx.NextRound()
 		n.enterYoDown()
 	default:
-		fmt.Printf("TO BE HANDLED")
+		n.logger.Printf("TO BE HANDLED (YO UP)\n")
 	}
 }
 
 func (n *ClusterNode) enterYoDown() {
 
-	fmt.Printf("%d: Started yo down, also i am a ", n.getId())
+	n.logger.Printf("Started yo down, also i am a ")
 	switch n.getElectionStatus() {
 
 	case election.Leader:
-		fmt.Printf("leader\n")
+		n.logger.Printf("leader\n")
 		for _, neighbor := range n.neighborList() {
 			n.SendToNeighbor(neighbor, n.newLeaderMessage(neighbor, n.getId()))
 		}
 		n.endElection(node.Leader, n.getId())
 		n.electionCtx.SwitchToState(election.Idle)
 	case election.Lost:
-		fmt.Printf("Loser\n")
+		n.logger.Printf("Loser\n")
 		n.electionCtx.SwitchToState(election.Idle)
 
 	case election.Source:
-		fmt.Printf("source\n")
+		n.logger.Printf("source\n")
 		for _, outNode := range n.electionCtx.OutNodes() {
 			n.SendToNeighbor(outNode, n.newProposalMessage(outNode, n.getId()))
 		}
-		fmt.Printf("%d: I have completed my yo down: Election proposals sent. Waiting for YO UP\n", n.getId())
+		n.logger.Printf("I have completed my yo down: Election proposals sent. Waiting for YO UP\n")
 		n.electionCtx.SwitchToState(election.WaitingYoUp)
 
 	case election.InternalNode:
-		fmt.Printf("internal node. I just switch to waiting\n")
+		n.logger.Printf("internal node. I just switch to waiting\n")
 		n.electionCtx.SwitchToState(election.WaitingYoDown)
 	case election.Sink:
-		fmt.Printf("sink. I just switch to waiting\n")
+		n.logger.Printf("sink. I just switch to waiting\n")
 		n.electionCtx.SwitchToState(election.WaitingYoDown)
 	}
 }
 func (n *ClusterNode) enterYoUp() {
 
-	fmt.Printf("%d: Started yo up, also i am a ", n.getId())
+	n.logger.Printf("Started yo up, also i am a ")
 	switch n.getElectionStatus() {
 	case election.Sink:
-		fmt.Printf("Sink\n")
+		n.logger.Printf("Sink\n")
 		// If im here i got all proposals, i need to check for pruning
 		pruneMe := false
 		if n.electionCtx.InNodesCount() == 1 {
-			fmt.Printf("%d: I have a single parent, i need to be pruned\n", n.getId())
+			n.logger.Printf("I have a single parent, i need to be pruned\n")
 			pruneMe = true
 
 			inNode := n.electionCtx.InNodes()[0] // 1 element only anyways
 			vote, _ := n.electionCtx.DetermineVote(inNode)
-			fmt.Printf("%d: My vote is %v\n", n.getId(), vote)
+			n.logger.Printf("My vote is %v\n", vote)
 			n.SendToNeighbor(inNode, n.newVoteMessage(inNode, vote, pruneMe))
 			if pruneMe {
 				n.electionCtx.PruneThisRound(inNode)
@@ -500,7 +507,7 @@ func (n *ClusterNode) enterYoUp() {
 					break
 				}
 			}
-			fmt.Printf("%d: I have multiple parents but they all gave me the same, i need to be pruned from all but one of them\n", n.getId())
+			n.logger.Printf("I have multiple parents but they all gave me the same, i need to be pruned from all but one of them\n")
 
 			inNodes := n.electionCtx.InNodes()
 			vote, _ := n.electionCtx.DetermineVote(inNodes[0])
@@ -515,12 +522,12 @@ func (n *ClusterNode) enterYoUp() {
 			}
 		}
 
-		fmt.Printf("%d: My round is done\n", n.getId())
+		n.logger.Printf("My round is done\n")
 		n.electionCtx.NextRound()
 		n.electionCtx.SwitchToState(election.WaitingYoDown)
 
 	case election.InternalNode:
-		fmt.Printf("Internal node. I have nothing to do, i go to WAIT\n")
+		n.logger.Printf("Internal node. I have nothing to do, i go to WAIT\n")
 		n.electionCtx.SwitchToState(election.WaitingYoUp)
 
 	case election.Source:
@@ -535,7 +542,7 @@ func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.Message) error {
 		// Malformatted, skip
 		return err
 	}
-	fmt.Printf("%d: A neighbor connected to me (%d %s), i have to add it!\n", n.getId(), sourceId, msg.Body[0])
+	n.logger.Printf("A neighbor connected to me (%d %s), i have to add it!\n", sourceId, msg.Body[0])
 	n.aknowledgeNeighborExistance(sourceId, msg.Body[0])
 	return nil
 }

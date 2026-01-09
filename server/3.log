@@ -1,0 +1,44 @@
+[[Node 3]]: 2026/01/09 16:48:12 cluster_node.go:60: Created dispatcher and assigned election messages
+[[Node 3]]: 2026/01/09 16:48:12 cluster_node.go:234: Election routine stard
+[[Node 3]]: 2026/01/09 16:48:12 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:110: Sent to 2, {node-3 node-2 0 [192.168.1.49:46003] 0}
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:242: Received {node-2 node-3 1 [] 0} on round 0. Also my state is 0
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:282: Election context set up perfectly
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:289: I too have received START, i forwarded it to my neighbors, but sender, and i start yo down
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:452: Started yo down, also i am a 
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:478: sink. I just switch to waiting
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:242: Received {node-2 node-3 2 [2] 0} on round 0. Also my state is 1
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:328: I have received the proposal: 2
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:353: I have received ALL!
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:359: My yo down is done! I can enter yo up
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:484: Started yo up, also i am a 
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:487: Sink
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:491: I have a single parent, i need to be pruned
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:496: My vote is true
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:110: Sent to 2, {node-3 node-2 3 [YES true] 0}
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:525: My round is done
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:242: Received {node-2 node-3 4 [2] 1} on round 1. Also my state is 1
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:306: I ended the election: Leader is: 2
+[[Node 3]]: 2026/01/09 16:48:15 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:242: Received {node-2 node-3 1 [] 0} on round 0. Also my state is 0
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:282: Election context set up perfectly
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:289: I too have received START, i forwarded it to my neighbors, but sender, and i start yo down
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:452: Started yo down, also i am a 
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:478: sink. I just switch to waiting
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:242: Received {node-2 node-3 2 [1] 0} on round 0. Also my state is 1
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:328: I have received the proposal: 1
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:353: I have received ALL!
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:359: My yo down is done! I can enter yo up
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:484: Started yo up, also i am a 
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:487: Sink
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:491: I have a single parent, i need to be pruned
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:496: My vote is true
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:110: Sent to 2, {node-3 node-2 3 [YES true] 0}
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:525: My round is done
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:239: Waiting for election message
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:242: Received {node-2 node-3 4 [1] 0} on round 1. Also my state is 1
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:306: I ended the election: Leader is: 1
+[[Node 3]]: 2026/01/09 16:48:43 cluster_node.go:239: Waiting for election message

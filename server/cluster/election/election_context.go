@@ -71,6 +71,7 @@ func (r *roundContext) setupNewRound(epoch uint) {
 	clear(r.receivedProposals)
 	r.awaitedVotes = 0
 	clear(r.receivedVotes)
+	r.pruneList = r.pruneList[:0]
 }
 
 type ElectionContext struct {
@@ -117,6 +118,7 @@ func (e *ElectionContext) GetAllProposals() map[node.NodeId]node.NodeId {
 }
 
 func (e *ElectionContext) PruneThisRound(id node.NodeId) {
+	fmt.Printf("ADDING %d to PRUINE LIST\n", id)
 	e.currentRound.pruneList = append(e.currentRound.pruneList, id)
 }
 
@@ -228,16 +230,21 @@ func (e *ElectionContext) UpdateStatus() {
 
 	oldStatus := e.status
 
-	if e.orientationCount[Incoming] > 0 {
-		if e.orientationCount[Outgoing] > 0 {
+	fmt.Printf("I have %d IN and %d OUT neighbors. So i become:", e.InNodesCount(), e.OutNodesCount())
+	if e.InNodesCount() > 0 {
+		if e.OutNodesCount() > 0 {
+			fmt.Printf(" Internal\n")
 			e.status = InternalNode
 		} else {
+			fmt.Printf(" Sink\n")
 			e.status = Sink
 		}
 	} else {
-		if e.orientationCount[Outgoing] > 0 {
+		if e.OutNodesCount() > 0 {
+			fmt.Printf(" Source\n")
 			e.status = Source
 		} else {
+			fmt.Printf(" Nigga\n")
 			// 0 in neighbors, 0 out neighbor
 			if oldStatus == Source {
 				e.status = Leader
@@ -272,9 +279,12 @@ func (e *ElectionContext) updateLinks() {
 		}
 	}
 
+	fmt.Printf("I have inverted: ")
 	for _, node := range toFlip {
 		e.InvertOrientation(node)
+		fmt.Printf("%d ", node)
 	}
+	fmt.Printf("\n")
 }
 
 func (e *ElectionContext) DetermineVote(proposerId node.NodeId) (bool, error) {
