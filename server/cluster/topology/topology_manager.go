@@ -65,7 +65,9 @@ func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
 		connMan,
 	}
 
-	t.connectionManager.StartMonitoring(t.markOk, t.markOff)
+	fmt.Println("Created topology manager for %d\n", config.Id)
+	t.connectionManager.StartMonitoring(t.markOn, t.markOff)
+	fmt.Println("Started monitoring the connection manager")
 
 	return t, nil
 }
@@ -158,6 +160,7 @@ func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error)
 }
 
 func (t *TopologyManager) markOff(neighborAddr string) {
+	fmt.Printf("%s went off\n", neighborAddr)
 	id, err := t.getByAddress(neighborAddr)
 	if err != nil {
 		return
@@ -166,7 +169,8 @@ func (t *TopologyManager) markOff(neighborAddr string) {
 		t.neighborsStatus[id] = Off
 	}
 }
-func (t *TopologyManager) markOk(neighborAddr string) {
+func (t *TopologyManager) markOn(neighborAddr string) {
+	fmt.Printf("%s came on\n", neighborAddr)
 	id, err := t.getByAddress(neighborAddr)
 	if err != nil {
 		return

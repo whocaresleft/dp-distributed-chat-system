@@ -59,6 +59,7 @@ func NewConnectionManager(node node.NodeConfig) (*ConnectionManager, error) {
 	}
 
 	r.SetRouterHandover(true)
+	fmt.Println("Created connection manager for node ", node.Id)
 	return &ConnectionManager{r}, nil
 }
 

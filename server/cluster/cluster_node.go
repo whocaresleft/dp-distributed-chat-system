@@ -52,6 +52,8 @@ func NewClusterNode(id node.NodeId, port uint16) (*ClusterNode, error) {
 	dispatcher[protocol.ElectionVote] = electionInbox
 	dispatcher[protocol.ElectionLeader] = electionInbox
 
+	fmt.Printf("Created dispatcher and assigned election messages\n", id)
+
 	return &ClusterNode{
 		config,
 		tp,

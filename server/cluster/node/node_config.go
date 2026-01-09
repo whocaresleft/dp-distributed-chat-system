@@ -8,6 +8,8 @@
 
 package node
 
+import "fmt"
+
 // A NodeConfig contains the minimum required information for a node to enter the cluster
 type NodeConfig struct {
 	Id   NodeId `json:"id"`   // Required to participate in the election process
@@ -19,6 +21,7 @@ func NewNodeConfig(id NodeId, port int) (*NodeConfig, error) {
 	if err := IsPortValid(port); err != nil {
 		return nil, err
 	}
+	fmt.Printf("Created node config for node %d on port %d\n", id, port)
 	return &NodeConfig{id, uint16(port)}, nil
 }
 
