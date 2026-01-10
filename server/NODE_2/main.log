@@ -1,0 +1,12 @@
+[[Node 2] main]: 2026/01/10 19:11:25 Configuration component correctly created: Id{2}, Port{46002}
+[[Node 2] main]: 2026/01/10 19:11:25 Creating topology component
+[[Node 2] main]: 2026/01/10 19:11:25 Topology component correctly created
+[[Node 2] main]: 2026/01/10 19:11:25 Created context
+[[Node 2] main]: 2026/01/10 19:11:25 Node is all set
+[[Node 2] main]: 2026/01/10 19:11:25 {0}. Started output dispatcher. Awaiting messages to send...
+[[Node 2] main]: 2026/01/10 19:11:25 {0}. Started input dispatcher. Awaiting messages...
+[[Node 2] main]: 2026/01/10 19:11:35 {1}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{0}, Timestamp{1}}, Address{192.168.1.49:46002}
+[[Node 2] main]: 2026/01/10 19:11:35 {6}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{5}
+[[Node 2] main]: 2026/01/10 19:11:35 {8}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{1}, Timestamp{8}}, MessageType{1}, ElectionID{3-3}, Round{0}, Body{[2]}
+[[Node 2] main]: 2026/01/10 19:11:35 {11}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{10}
+[[Node 2] main]: 2026/01/10 19:11:35 {12}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{1}, Timestamp{12}}, MessageType{3}, ElectionID{3-3}, Round{1}, Body{[2]}

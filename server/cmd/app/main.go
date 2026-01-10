@@ -12,7 +12,7 @@ func main() {
 	nodes := make(map[node.NodeId]*cluster.ClusterNode)
 
 	for _, id := range ids {
-		n, _ := cluster.NewClusterNode(id, 46000+uint16(id))
+		n, _ := cluster.NewClusterNode(id, 46000+uint16(id), true)
 		nodes[id] = n
 	}
 

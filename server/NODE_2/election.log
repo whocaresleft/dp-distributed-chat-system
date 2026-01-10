@@ -1,0 +1,22 @@
+[[Node 2] election]: 2026/01/10 19:11:25 {0}. Started election handle
+[[Node 2] election]: 2026/01/10 19:11:25 {0}. Awaiting election message...
+[[Node 2] election]: 2026/01/10 19:11:35 {6}. Election message received: Header{Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{5}}, MessageType{0}, ElectionID{}, Round{0}, Body{[3-3]}
+[[Node 2] election]: 2026/01/10 19:11:35 {6}. Current state is Idle
+[[Node 2] election]: 2026/01/10 19:11:35 {6}. 3 sent me a stronger START message: received{3-3}, mine{}. Switching to this one
+[[Node 2] election]: 2026/01/10 19:11:35 {6}. Preparing election context for election {3-3}...
+[[Node 2] election]: 2026/01/10 19:11:35 {6}. Resetting the election context...
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Orienting the nodes with current neighbors
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. 3: Outgoing
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Calculating election 3-3 status: I am Source
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Finished setup for the election context
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Ignoring 3 as it is the sender
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Yo down started for round 0
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Source: Sending my id to out nodes...
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Sent to 3
+[[Node 2] election]: 2026/01/10 19:11:35 {7}. Awaiting election message...
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Election message received: Header{Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{10}}, MessageType{2}, ElectionID{3-3}, Round{0}, Body{[true true]}
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Current state is Waiting Yo Up
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Stored the vote of true by 3, waiting for 0 more proposals...  Pruning asked: true
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Got all votes
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Yo down started for round 1
+[[Node 2] election]: 2026/01/10 19:11:35 {11}. Awaiting election message...

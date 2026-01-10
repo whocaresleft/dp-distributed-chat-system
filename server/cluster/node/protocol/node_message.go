@@ -27,7 +27,7 @@ func (h *MessageHeader) MarkTimestamp(timestamp uint64) {
 }
 
 func (h *MessageHeader) String() string {
-	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%d}, Timestamp{%d}", h.Sender, h.Destination, h.Type, h.TimeStamp)
+	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%d}, Timestamp{%d}", h.Sender, h.Destination, uint8(h.Type), h.TimeStamp)
 }
 
 type Message interface {
@@ -55,5 +55,5 @@ func (j *JoinMessage) SetHeader(h *MessageHeader) {
 	j.Header = *h
 }
 func (j *JoinMessage) String() string {
-	return fmt.Sprintf("Header{%s}, Address{%s}", j.Header, j.Address)
+	return fmt.Sprintf("Header{%s}, Address{%s}", j.Header.String(), j.Address)
 }

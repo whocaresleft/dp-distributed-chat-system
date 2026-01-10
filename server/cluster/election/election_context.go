@@ -149,11 +149,19 @@ func (e *ElectionContext) Reset(clock uint64) {
 	e.FirstRound()
 }
 
+func (e *ElectionContext) GetAwaitedProposals() uint {
+	return e.currentRound.awaitedProposals
+}
+
+func (e *ElectionContext) GetAwaitedVotes() uint {
+	return e.currentRound.awaitedVotes
+}
+
 func IsStrongerThan(first, second ElectionId) bool {
-	if first == InvalidId {
+	if first == InvalidId { // If first is invalid, it can't be stronger
 		return false
 	}
-	if second == InvalidId {
+	if second == InvalidId { // If second is invalid, first is stronger
 		return true
 	}
 

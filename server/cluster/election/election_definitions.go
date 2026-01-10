@@ -34,6 +34,18 @@ const (
 	Winner
 )
 
+var readableStatuses = []string{
+	"Source",
+	"InternalNode",
+	"Sink",
+	"Loser",
+	"Winner",
+}
+
+func (s ElectionStatus) Readable() string {
+	return readableStatuses[uint(s)]
+}
+
 ////////////////////////////////////////////////
 
 type ElectionState uint8
@@ -43,6 +55,16 @@ const (
 	WaitingYoDown
 	WaitingYoUp
 )
+
+var readableStates = []string{
+	"Idle",
+	"Waiting Yo Down",
+	"Waiting Yo Up",
+}
+
+func (s ElectionState) Readable() string {
+	return readableStates[uint(s)]
+}
 
 ////////////////////////////////////////////////
 
@@ -82,5 +104,5 @@ func (e *ElectionMessage) SetHeader(h *protocol.MessageHeader) {
 }
 
 func (e *ElectionMessage) String() string {
-	return fmt.Sprintf("Header{%s}, MessageType{%d}, ElectionID{%s}, Round{%d}", e.Header.String(), e.MessageType, e.ElectionId, e.Round)
+	return fmt.Sprintf("Header{%s}, MessageType{%d}, ElectionID{%s}, Round{%d}, Body{%s}", e.Header.String(), uint8(e.MessageType), e.ElectionId, uint64(e.Round), e.Body)
 }

@@ -1,0 +1,25 @@
+[[Node 3] election]: 2026/01/10 19:11:25 {0}. Started election handle
+[[Node 3] election]: 2026/01/10 19:11:25 {0}. Awaiting election message...
+[[Node 3] election]: 2026/01/10 19:11:35 {2}. Preparing election context...
+[[Node 3] election]: 2026/01/10 19:11:35 {3}. Resetting the election context...
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Orienting the nodes with current neighbors
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. 2: Incoming
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Calculating election 3-3 status: I am Sink
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Setup the election context
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Sent START message to 2
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Sent START to all my neighbors, waiting confirm or earlier election proposal
+[[Node 3] election]: 2026/01/10 19:11:35 {4}. Yo down started for round 0
+[[Node 3] election]: 2026/01/10 19:11:35 {5}. Source: waiting for inlinks to send proposals
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Election message received: Header{Sender{node-2}, Destination{node-3}, Type{1}, Timestamp{8}}, MessageType{1}, ElectionID{3-3}, Round{0}, Body{[2]}
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Current state is Waiting Yo Down
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Stored the proposal of 2 by 2, waiting for 1 more proposals...
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Got all proposals, calculating the smallest ID... {2}
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Yo up started for round 0
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. SINK: Got all the proposals, need to send votes back
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. I have a single parent, need pruning
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Sent vote true to 2
+[[Node 3] election]: 2026/01/10 19:11:35 {9}. Awaiting election message...
+[[Node 3] election]: 2026/01/10 19:11:35 {13}. Election message received: Header{Sender{node-2}, Destination{node-3}, Type{1}, Timestamp{12}}, MessageType{3}, ElectionID{3-3}, Round{1}, Body{[2]}
+[[Node 3] election]: 2026/01/10 19:11:35 {13}. Current state is Waiting Yo Down
+[[Node 3] election]: 2026/01/10 19:11:35 {13}. Closing my election context...
+[[Node 3] election]: 2026/01/10 19:11:35 {13}. Awaiting election message...
