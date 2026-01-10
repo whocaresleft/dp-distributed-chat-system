@@ -11,6 +11,8 @@ package election
 import (
 	"fmt"
 	"server/cluster/node"
+	"strconv"
+	"strings"
 )
 
 type roundContext struct {
@@ -75,6 +77,10 @@ func (r *roundContext) setupNewRound(epoch uint) {
 }
 
 type ElectionContext struct {
+	idDiscriminant node.NodeId
+	idProposal     ElectionId
+	actualId       ElectionId
+
 	receivedStart  bool
 	receivedLeader bool
 
@@ -86,11 +92,14 @@ type ElectionContext struct {
 	orientationCount map[LinkDirection]uint
 }
 
-func NewElectionContext() *ElectionContext {
+func NewElectionContext(discriminant node.NodeId) *ElectionContext {
 	orientationCount := make(map[LinkDirection]uint)
 	orientationCount[Incoming] = 0
 	orientationCount[Outgoing] = 0
 	return &ElectionContext{
+		discriminant,
+		InvalidId,
+		InvalidId,
 		false,
 		false,
 		Source,
@@ -102,7 +111,29 @@ func NewElectionContext() *ElectionContext {
 	}
 }
 
-func (e *ElectionContext) Reset() {
+func (e *ElectionContext) SetId(id ElectionId) {
+	e.actualId = id
+}
+
+func (e *ElectionContext) GetId() ElectionId {
+	return e.actualId
+}
+
+func (e *ElectionContext) GetIdProposal() ElectionId {
+	return e.idProposal
+}
+
+func GenerateId(clock uint64, discriminant node.NodeId) ElectionId {
+	return ElectionId(fmt.Sprintf("%d-%d", clock, discriminant))
+}
+
+func (e *ElectionContext) generateId(clock uint64) ElectionId {
+	return GenerateId(clock, e.idDiscriminant)
+}
+
+func (e *ElectionContext) Clear() {
+	e.idProposal = InvalidId
+	e.idProposal = InvalidId
 	e.receivedStart = false
 	e.receivedLeader = false
 	e.status = Source
@@ -110,7 +141,49 @@ func (e *ElectionContext) Reset() {
 	e.orientationCount[Incoming] = 0
 	e.orientationCount[Outgoing] = 0
 	clear(e.linksOrientation)
+}
+
+func (e *ElectionContext) Reset(clock uint64) {
+	e.Clear()
+	e.actualId = e.generateId(clock)
 	e.FirstRound()
+}
+
+func IsStrongerThan(first, second ElectionId) bool {
+	if first == InvalidId {
+		return false
+	}
+	if second == InvalidId {
+		return true
+	}
+
+	clock1, discriminant1, _ := parseElectionId(first)
+	clock2, discriminant2, _ := parseElectionId(second)
+
+	if clock1 == clock2 {
+		return discriminant1 < discriminant2
+	}
+	return clock1 > clock2
+}
+
+func parseElectionId(id ElectionId) (uint64, node.NodeId, error) {
+
+	clockString, discriminantString, ok := strings.Cut(string(id), "-")
+	if !ok {
+		return 0, 0, fmt.Errorf("Id was mal-formatted")
+	}
+
+	clock, err := strconv.ParseInt(clockString, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	discriminant, _ := strconv.ParseInt(discriminantString, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint64(clock), node.NodeId(discriminant), nil
 }
 
 func (e *ElectionContext) GetAllProposals() map[node.NodeId]node.NodeId {
@@ -118,7 +191,6 @@ func (e *ElectionContext) GetAllProposals() map[node.NodeId]node.NodeId {
 }
 
 func (e *ElectionContext) PruneThisRound(id node.NodeId) {
-	fmt.Printf("ADDING %d to PRUINE LIST\n", id)
 	e.currentRound.pruneList = append(e.currentRound.pruneList, id)
 }
 
@@ -131,20 +203,15 @@ func (e *ElectionContext) FirstRound() {
 }
 
 func (e *ElectionContext) prune() {
-	fmt.Printf("I am pruning the following links: ")
 	for _, id := range e.currentRound.pruneList {
-		fmt.Printf("%d ", id)
 		e.Remove(id)
 	}
-	fmt.Printf("\n")
 }
 
 func (e *ElectionContext) NextRound() {
 	e.updateLinks()
 	e.prune()
 	e.UpdateStatus()
-
-	fmt.Printf("My new status is %v\n", e.status)
 
 	nextRound := e.CurrentRound() + 1
 	e.setupNewRound(nextRound)
@@ -230,26 +297,21 @@ func (e *ElectionContext) UpdateStatus() {
 
 	oldStatus := e.status
 
-	fmt.Printf("I have %d IN and %d OUT neighbors. So i become:", e.InNodesCount(), e.OutNodesCount())
 	if e.InNodesCount() > 0 {
 		if e.OutNodesCount() > 0 {
-			fmt.Printf(" Internal\n")
 			e.status = InternalNode
 		} else {
-			fmt.Printf(" Sink\n")
 			e.status = Sink
 		}
 	} else {
 		if e.OutNodesCount() > 0 {
-			fmt.Printf(" Source\n")
 			e.status = Source
 		} else {
-			fmt.Printf(" Nigga\n")
 			// 0 in neighbors, 0 out neighbor
 			if oldStatus == Source {
-				e.status = Leader
+				e.status = Winner
 			} else {
-				e.status = Lost
+				e.status = Loser
 			}
 		}
 	}
@@ -279,21 +341,16 @@ func (e *ElectionContext) updateLinks() {
 		}
 	}
 
-	fmt.Printf("I have inverted: ")
 	for _, node := range toFlip {
 		e.InvertOrientation(node)
-		fmt.Printf("%d ", node)
 	}
-	fmt.Printf("\n")
 }
 
 func (e *ElectionContext) DetermineVote(proposerId node.NodeId) (bool, error) {
-	fmt.Printf("Lets retreive %d's proposal\n", proposerId)
 	propose, err := e.RetrieveProposal(proposerId)
 	if err != nil {
 		return false, err
 	}
-	fmt.Printf("I got this propose: %d from %d. Smallest is %d\n", propose, proposerId, e.currentRound.smallestId)
 	return e.currentRound.smallestId == propose, nil
 }
 
@@ -308,7 +365,6 @@ func (e *ElectionContext) StoreProposal(sender node.NodeId, proposed node.NodeId
 	}
 
 	e.currentRound.awaitedProposals--
-	fmt.Printf("I need %d ore proposals\n", e.currentRound.awaitedProposals)
 	e.currentRound.receivedProposals[sender] = proposed
 	if proposed < e.currentRound.smallestId {
 		e.currentRound.smallestId = proposed

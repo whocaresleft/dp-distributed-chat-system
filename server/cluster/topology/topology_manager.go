@@ -183,6 +183,18 @@ func (t *TopologyManager) markOn(neighborAddr string) {
 	}
 }
 
+func GetOutboundIP() string {
+	return connection.GetOutboundIP()
+}
+
+func Identifier(id node.NodeId) string {
+	return connection.Identifier(id)
+}
+
+func ExtractIdentifier(address string) (node.NodeId, error) {
+	return connection.ExtractIdentifier([]byte(address))
+}
+
 // Checks whether there exists a neighbor with the given id.
 func (t *TopologyManager) Exists(neighbor node.NodeId) bool {
 	_, ok := t.neighbors[neighbor]

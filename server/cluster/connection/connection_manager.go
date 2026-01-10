@@ -11,6 +11,7 @@ package connection
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"server/cluster/node"
 	"strconv"
 	"strings"
@@ -83,6 +84,12 @@ func (c *ConnectionManager) StartMonitoring(connectCallback, disconnectCallback 
 			}
 		}
 	}()
+}
+
+func GetOutboundIP() string {
+	conn, _ := net.Dial("udp", "8.8.8.8:80")
+	defer conn.Close()
+	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
 
 func (c *ConnectionManager) GetIdentity() string {

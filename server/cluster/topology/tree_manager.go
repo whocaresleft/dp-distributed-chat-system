@@ -53,17 +53,6 @@ func (t *TreeManager) ChildrenLength() int {
 	return len(t.children)
 }
 
-// Returns true when there are no children.
-// It's equivalent to `.Length() == 0`
-func (t *TreeManager) IsLeaf() bool {
-	return t.ChildrenLength() == 0
-}
-
-// Returns true if the node is the root of the tree.
-func (t *TreeManager) IsRoot() bool {
-	return t.parent == nil
-}
-
 // Sets the parent of the node
 func (t *TreeManager) SetParent(parentId *node.NodeId) {
 	t.parent = parentId
@@ -75,4 +64,15 @@ func (t *TreeManager) GetParent() (node.NodeId, error) {
 		return 0, fmt.Errorf("The node is the root and does not have a parent")
 	}
 	return *t.parent, nil
+}
+
+// Returns true when there are no children.
+// It's equivalent to `.Length() == 0`
+func (t *TreeManager) IsLeaf() bool {
+	return t.ChildrenLength() == 0
+}
+
+// Returns true if the node is the root of the tree.
+func (t *TreeManager) IsRoot() bool {
+	return t.parent == nil
 }
