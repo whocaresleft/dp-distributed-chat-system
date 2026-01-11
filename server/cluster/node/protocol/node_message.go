@@ -7,14 +7,16 @@ type MessageType uint8
 const (
 	Join MessageType = iota
 	Election
+	Heartbeat
 )
 
 var readableType = []string{
 	"Join",
 	"Election",
+	"Heartbeat",
 }
 
-func (t MessageType) Readable() string {
+func (t MessageType) String() string {
 	return readableType[int(t)]
 }
 
@@ -36,7 +38,7 @@ func (h *MessageHeader) MarkTimestamp(timestamp uint64) {
 }
 
 func (h *MessageHeader) String() string {
-	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%s}, Timestamp{%d}", h.Sender, h.Destination, h.Type.Readable(), h.TimeStamp)
+	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%s}, Timestamp{%d}", h.Sender, h.Destination, h.Type.String(), h.TimeStamp)
 }
 
 type Message interface {

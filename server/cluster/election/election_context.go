@@ -10,6 +10,7 @@ package election
 
 import (
 	"fmt"
+	election_definitions "server/cluster/election/definitions"
 	"server/cluster/node"
 )
 
@@ -76,68 +77,68 @@ func (r *roundContext) setupNewRound(epoch uint) {
 
 type ElectionContext struct {
 	idDiscriminant node.NodeId
-	idProposal     ElectionId
-	actualId       ElectionId
+	idProposal     election_definitions.ElectionId
+	actualId       election_definitions.ElectionId
 
 	receivedStart  bool
 	receivedLeader bool
 
-	status           ElectionStatus
-	state            ElectionState
+	status           election_definitions.ElectionStatus
+	state            election_definitions.ElectionState
 	currentRound     *roundContext
 	futureRounds     map[uint]*futureRoundContext
-	linksOrientation map[node.NodeId]LinkDirection
-	orientationCount map[LinkDirection]uint
+	linksOrientation map[node.NodeId]election_definitions.LinkDirection
+	orientationCount map[election_definitions.LinkDirection]uint
 }
 
 func NewElectionContext(discriminant node.NodeId) *ElectionContext {
-	orientationCount := make(map[LinkDirection]uint)
-	orientationCount[Incoming] = 0
-	orientationCount[Outgoing] = 0
+	orientationCount := make(map[election_definitions.LinkDirection]uint)
+	orientationCount[election_definitions.Incoming] = 0
+	orientationCount[election_definitions.Outgoing] = 0
 	return &ElectionContext{
 		discriminant,
-		InvalidId,
-		InvalidId,
+		election_definitions.InvalidId,
+		election_definitions.InvalidId,
 		false,
 		false,
-		Source,
-		Idle,
+		election_definitions.Source,
+		election_definitions.Idle,
 		NewRoundContext(0),
 		make(map[uint]*futureRoundContext),
-		make(map[node.NodeId]LinkDirection),
+		make(map[node.NodeId]election_definitions.LinkDirection),
 		orientationCount,
 	}
 }
 
-func (e *ElectionContext) SetId(id ElectionId) {
+func (e *ElectionContext) SetId(id election_definitions.ElectionId) {
 	e.actualId = id
 }
 
-func (e *ElectionContext) GetId() ElectionId {
+func (e *ElectionContext) GetId() election_definitions.ElectionId {
 	return e.actualId
 }
 
-func (e *ElectionContext) GetIdProposal() ElectionId {
+func (e *ElectionContext) GetIdProposal() election_definitions.ElectionId {
 	return e.idProposal
 }
 
-func GenerateId(clock uint64, discriminant node.NodeId) ElectionId {
-	return ElectionId(fmt.Sprintf("%d-%d", clock, discriminant))
+func GenerateId(clock uint64, discriminant node.NodeId) election_definitions.ElectionId {
+	return election_definitions.ElectionId(fmt.Sprintf("%d-%d", clock, discriminant))
 }
 
-func (e *ElectionContext) generateId(clock uint64) ElectionId {
+func (e *ElectionContext) generateId(clock uint64) election_definitions.ElectionId {
 	return GenerateId(clock, e.idDiscriminant)
 }
 
 func (e *ElectionContext) Clear() {
-	e.idProposal = InvalidId
-	e.idProposal = InvalidId
+	e.idProposal = election_definitions.InvalidId
+	e.idProposal = election_definitions.InvalidId
 	e.receivedStart = false
 	e.receivedLeader = false
-	e.status = Source
-	e.state = Idle
-	e.orientationCount[Incoming] = 0
-	e.orientationCount[Outgoing] = 0
+	e.status = election_definitions.Source
+	e.state = election_definitions.Idle
+	e.orientationCount[election_definitions.Incoming] = 0
+	e.orientationCount[election_definitions.Outgoing] = 0
 	clear(e.linksOrientation)
 }
 
@@ -225,7 +226,7 @@ func (e *ElectionContext) Exists(id node.NodeId) bool {
 	return ok
 }
 
-func (e *ElectionContext) Add(id node.NodeId, orientation LinkDirection) error {
+func (e *ElectionContext) Add(id node.NodeId, orientation election_definitions.LinkDirection) error {
 	if e.Exists(id) {
 		return fmt.Errorf("Node %d is already present", id)
 	}
@@ -244,7 +245,7 @@ func (e *ElectionContext) Remove(id node.NodeId) error {
 	return nil
 }
 
-func (e *ElectionContext) SetOrientation(id node.NodeId, orientation LinkDirection) error {
+func (e *ElectionContext) SetOrientation(id node.NodeId, orientation election_definitions.LinkDirection) error {
 	if !e.Exists(id) {
 		return fmt.Errorf("Node %d is not present, you can add it with .Add()", id)
 	}
@@ -255,7 +256,7 @@ func (e *ElectionContext) SetOrientation(id node.NodeId, orientation LinkDirecti
 	return nil
 }
 
-func (e *ElectionContext) GetOrientation(id node.NodeId) (LinkDirection, error) {
+func (e *ElectionContext) GetOrientation(id node.NodeId) (election_definitions.LinkDirection, error) {
 	if !e.Exists(id) {
 		return false, fmt.Errorf("Node %d is not present, you can add it with .Add()", id)
 	}
@@ -268,19 +269,19 @@ func (e *ElectionContext) UpdateStatus() {
 
 	if e.InNodesCount() > 0 {
 		if e.OutNodesCount() > 0 {
-			e.status = InternalNode
+			e.status = election_definitions.InternalNode
 		} else {
-			e.status = Sink
+			e.status = election_definitions.Sink
 		}
 	} else {
 		if e.OutNodesCount() > 0 {
-			e.status = Source
+			e.status = election_definitions.Source
 		} else {
 			// 0 in neighbors, 0 out neighbor
-			if oldStatus == Source {
-				e.status = Winner
+			if oldStatus == election_definitions.Source {
+				e.status = election_definitions.Winner
 			} else {
-				e.status = Loser
+				e.status = election_definitions.Loser
 			}
 		}
 	}
@@ -329,7 +330,7 @@ func (e *ElectionContext) DetermineVote(proposerId node.NodeId) (bool, error) {
 }
 
 func (e *ElectionContext) StoreProposal(sender node.NodeId, proposed node.NodeId) error {
-	if e.linksOrientation[sender] == Outgoing {
+	if e.linksOrientation[sender] == election_definitions.Outgoing {
 		return fmt.Errorf("Proposal should arrive from incoming links")
 	}
 
@@ -402,7 +403,7 @@ func (e *ElectionContext) RetrieveProposal(sender node.NodeId) (node.NodeId, err
 }
 
 func (e *ElectionContext) StoreVote(sender node.NodeId, vote bool) error {
-	if e.linksOrientation[sender] == Incoming {
+	if e.linksOrientation[sender] == election_definitions.Incoming {
 		return fmt.Errorf("Votes should arrive from outgoing links")
 	}
 
@@ -442,28 +443,28 @@ func (e *ElectionContext) GetVoteToForward() bool {
 	return e.currentRound.forwardedVote
 }
 
-func (e *ElectionContext) GetStatus() ElectionStatus {
+func (e *ElectionContext) GetStatus() election_definitions.ElectionStatus {
 	return e.status
 }
 
-func (e *ElectionContext) SwitchToState(s ElectionState) {
+func (e *ElectionContext) SwitchToState(s election_definitions.ElectionState) {
 	e.state = s
 }
 
-func (e *ElectionContext) GetState() ElectionState {
+func (e *ElectionContext) GetState() election_definitions.ElectionState {
 	return e.state
 }
 
 func (e *ElectionContext) IsSource() bool {
-	return e.status == Source
+	return e.status == election_definitions.Source
 }
 
 func (e *ElectionContext) IsSink() bool {
-	return e.status == Sink
+	return e.status == election_definitions.Sink
 }
 
 func (e *ElectionContext) IsInternal() bool {
-	return e.status == InternalNode
+	return e.status == election_definitions.InternalNode
 }
 
 func (e *ElectionContext) InvertOrientation(id node.NodeId) error {
@@ -471,7 +472,7 @@ func (e *ElectionContext) InvertOrientation(id node.NodeId) error {
 	if err != nil {
 		return err
 	}
-	if err := e.SetOrientation(id, orientation.inverse()); err != nil {
+	if err := e.SetOrientation(id, orientation.Inverse()); err != nil {
 		return err
 	}
 	return nil
@@ -488,11 +489,11 @@ func (e *ElectionContext) OutNodes() []node.NodeId {
 }
 
 func (e *ElectionContext) InNodesCount() uint {
-	return e.orientationCount[Incoming]
+	return e.orientationCount[election_definitions.Incoming]
 }
 
 func (e *ElectionContext) OutNodesCount() uint {
-	return e.orientationCount[Outgoing]
+	return e.orientationCount[election_definitions.Outgoing]
 }
 
 func (e *ElectionContext) Nodes() ([]node.NodeId, []node.NodeId) {
@@ -501,7 +502,7 @@ func (e *ElectionContext) Nodes() ([]node.NodeId, []node.NodeId) {
 
 	in, out := 0, 0
 	for id, orientation := range e.linksOrientation {
-		if orientation == Incoming {
+		if orientation == election_definitions.Incoming {
 			inNodes[in] = id
 			in++
 		} else {

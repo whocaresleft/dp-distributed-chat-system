@@ -23,6 +23,8 @@ func main() {
 		go n.RunOutputDispatcher()
 		go n.JoinHandle()
 		go n.ElectionHandle()
+		go n.HeartbeatHandle()
+
 		wait()
 		n.AddNeighbor(2, "127.0.0.1:46002")
 
@@ -32,6 +34,7 @@ func main() {
 		go n.RunOutputDispatcher()
 		go n.JoinHandle()
 		go n.ElectionHandle()
+		go n.HeartbeatHandle()
 
 		wait()
 		n.AddNeighbor(3, "127.0.0.1:46003")
@@ -41,6 +44,7 @@ func main() {
 		go n.RunOutputDispatcher()
 		go n.JoinHandle()
 		go n.ElectionHandle()
+		go n.HeartbeatHandle()
 
 		wait()
 		n.AddNeighbor(1, "127.0.0.1:46001")
@@ -50,8 +54,10 @@ func main() {
 		go n.RunOutputDispatcher()
 		go n.JoinHandle()
 		go n.ElectionHandle()
+		go n.HeartbeatHandle()
 
 		wait()
+		n.AddNeighbor(1, "127.0.0.1:46001")
 		n.AddNeighbor(2, "127.0.0.1:46002")
 		n.AddNeighbor(3, "127.0.0.1:46003")
 	}

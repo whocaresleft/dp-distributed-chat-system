@@ -14,21 +14,20 @@ import (
 	"server/cluster/connection"
 	"server/cluster/node"
 	"strconv"
+	"sync"
+	"time"
 )
 
-type Status bool
-
-const (
-	On  Status = true
-	Off Status = false
-)
+const timeout = 10 * time.Second
 
 // A TopologyManager is a component of a node that handles its local view inside the cluster's network.
 type TopologyManager struct {
 	id                int
-	neighbors         map[node.NodeId]string        // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
-	neighborsStatus   map[node.NodeId]Status        // Map of the status of neighbors, for each neighbor it reports either 'On' or 'Off'
+	neighbors         map[node.NodeId]string // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
+	neighborsLastSeen map[node.NodeId]time.Time
 	connectionManager *connection.ConnectionManager // Handles the connections between this node and the neighbors
+
+	neighborMutex sync.RWMutex
 }
 
 // Checks if the given string is a valid address, that is, formatted as `<ip-address>:<port-number>`.
@@ -61,12 +60,13 @@ func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
 	t := &TopologyManager{
 		int(config.Id),
 		make(map[node.NodeId]string),
-		make(map[node.NodeId]Status),
+		make(map[node.NodeId]time.Time),
 		connMan,
+		sync.RWMutex{},
 	}
 
 	//t.connectionManager.StartMonitoring(t.markOn, t.markOff)
-	t.connectionManager.StartMonitoring(func(string) {}, func(string) {})
+	//t.connectionManager.StartMonitoring(func(string) {}, func(string) {})
 
 	return t, nil
 }
@@ -91,8 +91,11 @@ func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
 }
 
 func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address string) {
+	t.neighborMutex.Lock()
+	defer t.neighborMutex.Unlock()
+
 	t.neighbors[neighbor] = address
-	t.neighborsStatus[neighbor] = Off
+	t.neighborsLastSeen[neighbor] = time.Time{}
 }
 
 // Replaces the address of the given node id with the new one.
@@ -110,8 +113,7 @@ func (t *TopologyManager) replace(neighbor node.NodeId, address string) error {
 		return err
 	}
 
-	t.neighbors[neighbor] = address
-	t.neighborsStatus[neighbor] = Off
+	t.LogicalAdd(neighbor, address)
 	return nil
 }
 
@@ -126,8 +128,11 @@ func (t *TopologyManager) Remove(neighbor node.NodeId) error {
 		return err
 	}
 
+	t.neighborMutex.Lock()
+	defer t.neighborMutex.Unlock()
+
 	delete(t.neighbors, neighbor)
-	delete(t.neighborsStatus, neighbor)
+	delete(t.neighborsLastSeen, neighbor)
 	return nil
 }
 
@@ -141,19 +146,23 @@ func (t *TopologyManager) Get(neighbor node.NodeId) (string, error) {
 	return node, nil
 }
 
-// Returns the status of the neighbor with given id.
-// It returns (On/Off, nil) if the neighbor is present, and (Off, error) otherwise.
-func (t *TopologyManager) GetStatus(neighbor node.NodeId) (Status, error) {
-	status, ok := t.neighborsStatus[neighbor]
+func (t *TopologyManager) GetLastSeen(neighbor node.NodeId) (time.Time, error) {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	lastSeen, ok := t.neighborsLastSeen[neighbor]
 	if !ok {
-		return Off, fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
+		return time.Time{}, fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
 	}
-	return status, nil
+	return lastSeen, nil
 }
 
 // Returns the ID of the neighbor with the given address.
 // It returns (id, nil) if the neighbor is present, and (0, error) otherwise.
 func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error) {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
 	for k, v := range t.neighbors {
 		if v == neighborAddr {
 			return k, nil
@@ -162,25 +171,29 @@ func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error)
 	return 0, fmt.Errorf("There is no neighbor with address %s", neighborAddr)
 }
 
-func (t *TopologyManager) markOff(neighborAddr string) {
-	fmt.Printf("%s went off\n", neighborAddr)
-	id, err := t.getByAddress(neighborAddr)
-	if err != nil {
-		return
+func (t *TopologyManager) UpdateLastSeen(neighbor node.NodeId, lastSeen time.Time) error {
+	t.neighborMutex.Lock()
+	defer t.neighborMutex.Unlock()
+
+	_, ok := t.neighborsLastSeen[neighbor]
+	if !ok {
+		return fmt.Errorf("The ID %d does not correspont to any neighbor", neighbor)
 	}
-	if t.neighborsStatus[id] == On {
-		t.neighborsStatus[id] = Off
-	}
+	t.neighborsLastSeen[neighbor] = lastSeen
+	return nil
 }
-func (t *TopologyManager) markOn(neighborAddr string) {
-	fmt.Printf("%s came on\n", neighborAddr)
-	id, err := t.getByAddress(neighborAddr)
-	if err != nil {
-		return
+
+func (t *TopologyManager) IsAlive(neighbor node.NodeId) bool {
+
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	lastSeen, ok := t.neighborsLastSeen[neighbor]
+	if !ok || lastSeen.IsZero() {
+		return false
 	}
-	if t.neighborsStatus[id] == Off {
-		t.neighborsStatus[id] = On
-	}
+
+	return time.Since(lastSeen) < timeout
 }
 
 func GetOutboundIP() string {
@@ -220,6 +233,9 @@ func (t *TopologyManager) IsDisconnected() bool {
 
 // Creates a list with the IDs of all neighbors
 func (t *TopologyManager) NeighborList() []node.NodeId {
+	t.neighborMutex.Lock()
+	defer t.neighborMutex.Unlock()
+
 	list := make([]node.NodeId, t.Length())
 
 	idx := 0

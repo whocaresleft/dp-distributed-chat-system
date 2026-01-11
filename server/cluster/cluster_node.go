@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"server/cluster/election"
+	election_definitions "server/cluster/election/definitions"
 	"server/cluster/nlog"
 	"server/cluster/node"
 	"server/cluster/node/protocol"
@@ -37,6 +38,9 @@ func registerLogfiles(n *nlog.NodeLogger) error {
 	if err := n.AddLogger("election"); err != nil {
 		return err
 	}
+	if err := n.AddLogger("heartbeat"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -55,7 +59,7 @@ type ClusterNode struct {
 	treeMan         *topology.TreeManager
 
 	topologyInbox chan *protocol.JoinMessage
-	electionInbox chan *election.ElectionMessage
+	electionInbox chan *election_definitions.ElectionMessage
 	outputChannel chan outMessage
 
 	logger *nlog.NodeLogger
@@ -91,7 +95,7 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 
 	logger.Logf("main", "Topology component correctly created")
 
-	electionInbox := make(chan *election.ElectionMessage, 500)
+	electionInbox := make(chan *election_definitions.ElectionMessage, 500)
 	joinInbox := make(chan *protocol.JoinMessage, 500)
 	outChan := make(chan outMessage, 500)
 
@@ -169,6 +173,9 @@ func (n *ClusterNode) RunInputDispatcher() {
 		header := msg.GetHeader()
 		n.logf("main", "Message received on dispatcher: %d, %v", id, header.String())
 
+		n.logf("heartbeat", "Message used as keepalive for %d", id)
+		n.markAlive(id)
+
 		switch header.Type {
 		case protocol.Join:
 			if n.IsNeighborsWith(id) {
@@ -179,7 +186,7 @@ func (n *ClusterNode) RunInputDispatcher() {
 			}
 
 		case protocol.Election:
-			if m, ok := msg.(*election.ElectionMessage); ok {
+			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
 				n.electionInbox <- m
 			}
 		}
@@ -213,13 +220,36 @@ func (n *ClusterNode) RecvJoinMessage() *protocol.JoinMessage {
 
 // Retrieves an election message, that is, reading from the input channel designated for election messages.
 // It returns a pointer to the message
-func (n *ClusterNode) RecvElectionMessage() *election.ElectionMessage {
+func (n *ClusterNode) RecvElectionMessage() *election_definitions.ElectionMessage {
 	return <-n.electionInbox
 }
 
 // It sends an election message to the given node (based on ID). It sends the message onto the output channel.
 func (n *ClusterNode) SendElectionMessage(neighbor node.NodeId, msg protocol.Message) {
 	n.outputChannel <- outMessage{neighbor, msg}
+}
+
+// It sends an heartbeat message to the given node (based on ID). It sends the message onto the output channel.
+func (n *ClusterNode) SendHeartbeat(neighbor node.NodeId) {
+	n.outputChannel <- outMessage{
+		neighbor,
+		topology.NewHeartbeatMessage(
+			protocol.NewMessageHeader(
+				n.connectionIdentifier(),
+				connectionIdentifier(neighbor),
+				protocol.Heartbeat,
+			),
+		),
+	}
+}
+
+func (n *ClusterNode) HeartbeatHandle() {
+	ticker := time.NewTicker(2 * time.Second)
+	for range ticker.C {
+		for _, neighbor := range n.neighborList() {
+			n.SendHeartbeat(neighbor)
+		}
+	}
 }
 
 func (n *ClusterNode) JoinHandle() {
@@ -239,19 +269,27 @@ func (n *ClusterNode) JoinHandle() {
 		//n.setElectionStartReceived()
 
 		// The neighbor was added, time to start the election
-		n.logf("election", "Preparing election context...")
-		electionID := n.ElectionSetup()
-		n.logf("election", "Setup the election context")
+		n.startElection()
 
-		for _, neighbor := range n.neighborList() {
-			n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, electionID))
-			n.logf("election", "Sent START message to %d", neighbor)
-		}
-
-		n.logf("election", "Sent START to all my neighbors, waiting confirm or earlier election proposal")
-		n.setElectionStartReceived()
-		n.enterYoDown()
+		//n.logf("election", "Sent START to all my neighbors, waiting confirm or earlier election proposal")
+		//n.setElectionStartReceived()
+		//n.enterYoDown()
 	}
+}
+
+func (n *ClusterNode) startElection() {
+	n.logf("election", "Preparing election context...")
+	electionID := n.ElectionSetup()
+	n.logf("election", "Setup the election context")
+
+	for _, neighbor := range n.neighborList() {
+		n.SendElectionMessage(neighbor, n.NewStartMessage(neighbor, electionID))
+		n.logf("election", "Sent START message to %d", neighbor)
+	}
+
+	n.logf("election", "Sent START to all my neighbors, waiting confirm or earlier election proposal")
+	n.setElectionStartReceived()
+	n.enterYoDown()
 }
 
 // FSM that handles the election process.
@@ -261,49 +299,138 @@ func (n *ClusterNode) ElectionHandle() {
 
 	n.logf("election", "Started election handle")
 
-	n.switchToElectionState(election.Idle)
+	n.switchToElectionState(election_definitions.Idle)
 
 	for {
+		n.logf("election", "Awaiting election message (or timeout)...")
+		state := n.getElectionState()
 
-		n.logf("election", "Awaiting election message...")
-		message := n.RecvElectionMessage()
-		n.logf("election", "Election message received: %s", message.String())
-		n.logf("election", "Current state is %v", n.getElectionState().Readable())
+		select {
+		case message := <-n.electionInbox:
+			n.logf("election", "Election message received: %s", message.String())
+			n.logf("election", "Current state is %v", state.String())
 
-		switch n.getElectionState() {
+			switch state {
 
-		case election.Idle:
-			n.handleIdleState(message)
+			case election_definitions.Idle:
+				n.handleIdleState(message)
 
-		case election.WaitingYoDown:
-			n.handleWaitingYoDown(message)
+			case election_definitions.WaitingYoDown:
+				n.handleWaitingYoDown(message)
 
-		case election.WaitingYoUp:
-			n.handleWaitingYoUp(message)
+			case election_definitions.WaitingYoUp:
+				n.handleWaitingYoUp(message)
+			}
+
+		case <-time.After(15 * time.Second):
+			n.logf("election", "Timeout occurred... Current state is %v", state.String())
+
+			switch state {
+			case election_definitions.WaitingYoDown:
+				n.handleYoDownTimeout()
+			case election_definitions.WaitingYoUp:
+				n.handleYoUpTimeout()
+			case election_definitions.Idle:
+				// Nothing
+			}
+		}
+
+	}
+}
+
+func (n *ClusterNode) handleYoDownTimeout() {
+
+	for _, node := range n.electionCtx.InNodes() {
+		_, err := n.electionCtx.RetrieveProposal(node)
+		if err != nil {
+			if !n.isAlive(node) {
+				n.logf("election", "InNode %d is OFF. Restarting", node)
+				n.startElection()
+				return
+			}
 		}
 	}
 }
 
-func (n *ClusterNode) handleIdleState(message *election.ElectionMessage) {
+func (n *ClusterNode) handleYoUpTimeout() {
 
-	switch message.MessageType {
-
-	case election.Start: // A node sent START because a neighbor received JOIN or START
-		n.handleStartMessage(message)
-
-	case election.Leader:
-		n.logf("election", "Someone sent me a LEADER message")
-		n.handleLeaderMessage(message)
-	default:
-		n.logf("election", "Received %v type during Idle State, ignoring?", message.MessageType)
+	for _, node := range n.electionCtx.OutNodes() {
+		_, err := n.electionCtx.RetrieveVote(node)
+		if err != nil {
+			if !n.isAlive(node) {
+				n.logf("election", "InNode %d is OFF. Restarting", node)
+				n.startElection()
+				return
+			}
+		}
 	}
 }
 
-func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
+func (n *ClusterNode) handleIdleState(message *election_definitions.ElectionMessage) {
+
+	switch message.MessageType {
+
+	case election_definitions.Start: // A node sent START because a neighbor received JOIN or START
+
+		if n.postElectionCtx != nil {
+
+			electionId := n.postElectionCtx.GetElectionId()
+			receivedId := election_definitions.ElectionId(message.Body[0]) // A start message has the electionId proposal in the body
+
+			cmp := electionId.Compare(receivedId)
+
+			if cmp > 0 {
+				n.logf("election", "The start message is for an older, or this, election, ignoring")
+				return
+			}
+
+			// Either the first election or a newer and stronger one, follow it
+			n.handleStartMessage(message)
+		}
+
+	case election_definitions.Leader:
+		if n.postElectionCtx != nil {
+			electionId := n.postElectionCtx.GetElectionId()
+			receivedId := message.ElectionId
+
+			cmp := electionId.Compare(receivedId)
+			if cmp > 0 {
+				n.logf("election", "The leader message is for an older, or this, election, ignoring")
+				return
+			}
+		}
+		// Either the first election of a newer one, forwarding it
+		n.handleLeaderMessage(message)
+
+	case election_definitions.Proposal:
+		if n.postElectionCtx != nil {
+			cmp := n.postElectionCtx.GetElectionId().Compare(message.ElectionId)
+			if cmp > 0 {
+				n.logf("election", "Received a proposal for an older election, ignoring")
+				return
+			}
+		}
+		// Either the first election or someone sent me a proposal for the current/newer election, try  to start another
+		n.startElection()
+
+	case election_definitions.Vote:
+		if n.postElectionCtx != nil {
+			cmp := n.postElectionCtx.GetElectionId().Compare(message.ElectionId)
+			if cmp > 0 {
+				n.logf("election", "Received a vote for an older election, ignoring")
+				return
+			}
+		}
+		// Either the first election or someone sent me a proposal for the current/newer election, try  to start another
+		n.startElection()
+	}
+}
+
+func (n *ClusterNode) handleWaitingYoDown(message *election_definitions.ElectionMessage) {
 
 	h := message.GetHeader()
 	switch message.MessageType {
-	case election.Proposal:
+	case election_definitions.Proposal:
 		sender, _ := extractConnectionIdentifier(h.Sender)
 		proposed, _ := strconv.Atoi(message.Body[0])
 
@@ -325,7 +452,7 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 					n.logf("election", "Ignoring %d as it is the sender", neighbor)
 					continue
 				}
-				n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, receivedElectionId))
+				n.SendElectionMessage(neighbor, n.NewStartMessage(neighbor, receivedElectionId))
 				n.logf("election", "Sent START message to %d", neighbor)
 			}
 			n.enterYoDown()
@@ -344,7 +471,7 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 
 		switch n.getElectionStatus() {
 
-		case election.InternalNode: // We need to gather all proposal from in neighbors, since we already received a message, update the round context
+		case election_definitions.InternalNode: // We need to gather all proposal from in neighbors, since we already received a message, update the round context
 			n.electionCtx.StoreProposal(sender, node.NodeId(proposed))
 			n.logf("election", "Stored the proposal of %d by %d, waiting for %d more proposals...", proposed, sender, n.electionCtx.GetAwaitedProposals())
 
@@ -361,7 +488,7 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 				n.logf("election", "Forwarding proposal to %d", outNode)
 			}
 
-		case election.Sink:
+		case election_definitions.Sink:
 			n.electionCtx.StoreProposal(sender, node.NodeId(proposed))
 			n.logf("election", "Stored the proposal of %d by %d, waiting for %d more proposals...", proposed, sender, n.electionCtx.GetAwaitedProposals())
 
@@ -370,15 +497,15 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 			}
 			n.logf("election", "Got all proposals, calculating the smallest ID... {%d}", n.electionCtx.GetSmallestId())
 
-		case election.Source:
+		case election_definitions.Source:
 			// Nothing, sources don't wait on YoDown
 		}
 
 		n.enterYoUp()
-	case election.Leader:
+	case election_definitions.Leader:
 		n.handleLeaderMessage(message)
 
-	case election.Start:
+	case election_definitions.Start:
 		n.handleStartMessage(message)
 
 	default:
@@ -386,12 +513,12 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 	}
 }
 
-func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
+func (n *ClusterNode) handleWaitingYoUp(message *election_definitions.ElectionMessage) {
 	h := message.GetHeader()
 
 	switch message.MessageType {
 
-	case election.Vote:
+	case election_definitions.Vote:
 		sender, _ := extractConnectionIdentifier(h.Sender)
 		vote, _ := strconv.ParseBool(message.Body[0])
 		pruneChild, _ := strconv.ParseBool(message.Body[1])
@@ -414,7 +541,7 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 					n.logf("election", "Ignoring %d as it is the sender", neighbor)
 					continue
 				}
-				n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, receivedElectionId))
+				n.SendElectionMessage(neighbor, n.NewStartMessage(neighbor, receivedElectionId))
 				n.logf("election", "Sent START message to %d", neighbor)
 			}
 			n.enterYoDown()
@@ -433,7 +560,7 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 
 		switch n.electionCtx.GetStatus() {
 
-		case election.InternalNode: // We need to gather all votes from out neighbors, since we already received a message, update the round context
+		case election_definitions.InternalNode: // We need to gather all votes from out neighbors, since we already received a message, update the round context
 			n.logf("election", "Stored the vote of %v by %d, waiting for %d more proposals...  Pruning asked: %v", vote, sender, n.electionCtx.GetAwaitedProposals(), pruneChild)
 			n.electionCtx.StoreVote(sender, vote)
 			if pruneChild {
@@ -471,7 +598,7 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 			n.nextElectionRound()
 			n.enterYoDown()
 
-		case election.Source:
+		case election_definitions.Source:
 			n.logf("election", "Stored the vote of %v by %d, waiting for %d more proposals...  Pruning asked: %v", vote, sender, n.electionCtx.GetAwaitedProposals(), pruneChild)
 			n.electionCtx.StoreVote(sender, vote)
 			if pruneChild {
@@ -485,11 +612,11 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 			n.nextElectionRound()
 			n.enterYoDown()
 
-		case election.Sink:
+		case election_definitions.Sink:
 			// Nothing, sinks don't wait on YoUP
 		}
 
-	case election.Start:
+	case election_definitions.Start:
 		n.handleStartMessage(message)
 	default:
 		n.logf("election", "Received %v type during WaitingYoUp State, ignoring?", message.MessageType)
@@ -501,39 +628,39 @@ func (n *ClusterNode) enterYoDown() {
 	n.logf("election", "Yo down started for round %d", n.currentElectionRound())
 	switch n.getElectionStatus() {
 
-	case election.Winner:
+	case election_definitions.Winner:
 		n.logf("election", "I won the election, sending my ID to others")
 		for _, neighbor := range n.neighborList() {
 			n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, n.getId()))
 			n.logf("election", "Sent leader message to %d", neighbor)
 		}
 		n.endElection(node.Leader, n.getId())
-		n.switchToElectionState(election.Idle)
-	case election.Loser:
+		n.switchToElectionState(election_definitions.Idle)
+	case election_definitions.Loser:
 		n.logf("election", "I lost the election")
-		n.switchToElectionState(election.Idle)
+		n.switchToElectionState(election_definitions.Idle)
 
-	case election.Source:
+	case election_definitions.Source:
 		n.logf("election", "Source: Sending my id to out nodes...")
 		for _, outNode := range n.electionCtx.OutNodes() {
 			n.SendElectionMessage(outNode, n.newProposalMessage(outNode, n.getId()))
 			n.logf("election", "Sent to %d", outNode)
 		}
-		n.switchToElectionState(election.WaitingYoUp)
+		n.switchToElectionState(election_definitions.WaitingYoUp)
 
-	case election.InternalNode:
+	case election_definitions.InternalNode:
 		n.logf("election", "Internal node: waiting for inlinks to send proposals")
-		n.switchToElectionState(election.WaitingYoDown)
-	case election.Sink:
+		n.switchToElectionState(election_definitions.WaitingYoDown)
+	case election_definitions.Sink:
 		n.logf("election", "Sink: waiting for inlinks to send proposals")
-		n.switchToElectionState(election.WaitingYoDown)
+		n.switchToElectionState(election_definitions.WaitingYoDown)
 	}
 }
 func (n *ClusterNode) enterYoUp() {
 
 	n.logf("election", "Yo up started for round %d", n.currentElectionRound())
 	switch n.getElectionStatus() {
-	case election.Sink:
+	case election_definitions.Sink:
 		n.logf("election", "SINK: Got all the proposals, need to send votes back")
 		// If im here i got all proposals, i need to check for pruning
 		pruneMe := false
@@ -575,26 +702,26 @@ func (n *ClusterNode) enterYoUp() {
 		}
 
 		n.nextElectionRound()
-		n.switchToElectionState(election.WaitingYoDown)
+		n.switchToElectionState(election_definitions.WaitingYoDown)
 
-	case election.InternalNode:
+	case election_definitions.InternalNode:
 		n.logf("election", "Internal node: waiting for outlinks to send votes")
-		n.switchToElectionState(election.WaitingYoUp)
+		n.switchToElectionState(election_definitions.WaitingYoUp)
 
-	case election.Source:
+	case election_definitions.Source:
 		// Shouldn't be possible but anyways it would be
 		n.logf("election", "Source: waiting for outlinks to send votes")
-		n.switchToElectionState(election.WaitingYoUp)
+		n.switchToElectionState(election_definitions.WaitingYoUp)
 	}
 }
 
-func (n *ClusterNode) ElectionSetup() election.ElectionId {
+func (n *ClusterNode) ElectionSetup() election_definitions.ElectionId {
 	id := n.generateElectionId()
 	n.ElectionSetupWithID(id)
 	return id
 }
 
-func (n *ClusterNode) ElectionSetupWithID(id election.ElectionId) {
+func (n *ClusterNode) ElectionSetupWithID(id election_definitions.ElectionId) {
 	n.logf("election", "Resetting the election context...")
 	n.electionCtx.Reset(n.incrementClock())
 	n.setElectionId(id)
@@ -605,17 +732,21 @@ func (n *ClusterNode) ElectionSetupWithID(id election.ElectionId) {
 	myId := n.getId()
 	var neighborId node.NodeId
 	for _, neighborId = range n.topologyMan.NeighborList() {
-		if myId < neighborId {
-			n.electionCtx.Add(neighborId, election.Outgoing)
-			n.logf("election", "%d: Outgoing", neighborId)
+		if n.isAlive(neighborId) {
+			if myId < neighborId {
+				n.electionCtx.Add(neighborId, election_definitions.Outgoing)
+				n.logf("election", "%d: Outgoing", neighborId)
+			} else {
+				n.electionCtx.Add(neighborId, election_definitions.Incoming)
+				n.logf("election", "%d: Incoming", neighborId)
+			}
 		} else {
-			n.electionCtx.Add(neighborId, election.Incoming)
-			n.logf("election", "%d: Incoming", neighborId)
+			n.logf("election", "%d: Off", neighborId)
 		}
 	}
 
 	n.electionCtx.UpdateStatus()
-	n.logf("election", "Calculating election %v status: I am %v", id, n.getElectionStatus().Readable())
+	n.logf("election", "Calculating election %v status: I am %v", id, n.getElectionStatus().String())
 
 	n.electionCtx.FirstRound()
 }
@@ -627,13 +758,14 @@ func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.JoinMessage) error {
 		return err
 	}
 	n.acknowledgeNeighborExistence(sourceId, msg.Address)
+	n.markAlive(sourceId)
 	return nil
 }
 
-func (n *ClusterNode) handleStartMessage(message *election.ElectionMessage) error {
+func (n *ClusterNode) handleStartMessage(message *election_definitions.ElectionMessage) error {
 	h := message.GetHeader()
 	sender, _ := extractConnectionIdentifier(h.Sender)
-	electionId := election.ElectionId(message.Body[0])
+	electionId := election_definitions.ElectionId(message.Body[0])
 
 	localBestId := n.electionCtx.GetId()
 	myIdProposal := n.electionCtx.GetIdProposal()
@@ -667,14 +799,15 @@ func (n *ClusterNode) handleStartMessage(message *election.ElectionMessage) erro
 			n.logf("election", "Ignoring %d as it is the sender", neighbor)
 			continue
 		}
-		n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, electionId))
+		n.SendElectionMessage(neighbor, n.NewStartMessage(neighbor, electionId))
 		n.logf("election", "Sent START message to %d", neighbor)
 	}
 	n.enterYoDown()
 	return nil
 }
 
-func (n *ClusterNode) handleLeaderMessage(message *election.ElectionMessage) error {
+func (n *ClusterNode) handleLeaderMessage(message *election_definitions.ElectionMessage) error {
+	n.logf("election", "Someone sent me a LEADER message")
 	if n.electionCtx.HasReceivedLeader() {
 		n.logf("election", "I have already received the leader news, ignoring...")
 		return nil
@@ -689,7 +822,13 @@ func (n *ClusterNode) handleLeaderMessage(message *election.ElectionMessage) err
 		return err
 	}
 
-	n.logf("election", "Closing my election context...")
+	if n.getId() < node.NodeId(leaderId) {
+		n.logf("election", "%d said it was leader, but I am with a stronger ID...", leaderId)
+		n.startElection()
+		return nil
+	}
+
+	n.logf("election", "%d said it was leader. closing my election context...")
 	n.endElection(node.Follower, node.NodeId(leaderId))
 	for _, neighbor := range n.neighborList() {
 		if neighbor == sender {
@@ -717,19 +856,19 @@ func (n *ClusterNode) newJoinMessage(neighbor node.NodeId) protocol.Message {
 	)
 }
 
-func (n *ClusterNode) newStartMessage(neighbor node.NodeId, proposedElectionId election.ElectionId) protocol.Message {
-	return election.NewElectionMessage(
+func (n *ClusterNode) NewStartMessage(neighbor node.NodeId, proposedElectionId election_definitions.ElectionId) protocol.Message {
+	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
-		election.Start,
-		election.InvalidId, // Not yet set,
+		election_definitions.Start,
+		election_definitions.InvalidId, // Not yet set,
 		[]string{string(proposedElectionId)},
 		0,
 	)
 }
 func (n *ClusterNode) newProposalMessage(neighbor, proposal node.NodeId) protocol.Message {
-	return election.NewElectionMessage(
+	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
-		election.Proposal,
+		election_definitions.Proposal,
 		n.electionCtx.GetId(),
 		[]string{fmt.Sprintf("%d", proposal)},
 		n.electionCtx.CurrentRound(),
@@ -737,9 +876,9 @@ func (n *ClusterNode) newProposalMessage(neighbor, proposal node.NodeId) protoco
 }
 func (n *ClusterNode) newVoteMessage(neighbor node.NodeId, vote, prune bool) protocol.Message {
 	// During this round, has this in neighbor voted for this id?
-	return election.NewElectionMessage(
+	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
-		election.Vote,
+		election_definitions.Vote,
 		n.electionCtx.GetId(),
 		[]string{
 			strconv.FormatBool(vote),  // Vote
@@ -749,9 +888,9 @@ func (n *ClusterNode) newVoteMessage(neighbor node.NodeId, vote, prune bool) pro
 	)
 }
 func (n *ClusterNode) newLeaderMessage(neighbor node.NodeId, leaderId node.NodeId) protocol.Message {
-	return election.NewElectionMessage(
+	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
-		election.Leader,
+		election_definitions.Leader,
 		n.electionCtx.GetId(),
 		[]string{fmt.Sprintf("%d", leaderId)},
 		n.electionCtx.CurrentRound(),
@@ -761,7 +900,7 @@ func (n *ClusterNode) newLeaderMessage(neighbor node.NodeId, leaderId node.NodeI
 func (n *ClusterNode) endElection(role node.NodeRole, leaderId node.NodeId) {
 	n.electionCtx.Clear()
 	n.electionCtx.SetLeaderReceived()
-	n.postElectionCtx = election.NewPostElectionContext(role, leaderId)
+	n.postElectionCtx = election.NewPostElectionContext(role, leaderId, n.electionCtx.GetId())
 }
 
 func (n *ClusterNode) timestampMessage(message protocol.Message) {
@@ -846,6 +985,14 @@ func (n *ClusterNode) neighborList() []node.NodeId {
 	return n.topologyMan.NeighborList()
 }
 
+func (n *ClusterNode) markAlive(neighbor node.NodeId) {
+	n.topologyMan.UpdateLastSeen(neighbor, time.Now())
+}
+
+func (n *ClusterNode) isAlive(neighbor node.NodeId) bool {
+	return n.topologyMan.IsAlive(neighbor)
+}
+
 // Sends a message to the neighbor node with given ID.
 // Returns an error if the message is mal-formatted.
 func (n *ClusterNode) sendToNeighbor(id node.NodeId, message protocol.Message) error {
@@ -881,11 +1028,13 @@ func (n *ClusterNode) recv() (id node.NodeId, msg protocol.Message, err error) {
 
 	switch header.Type {
 	case protocol.Join:
-
 		msg = &protocol.JoinMessage{}
-	case protocol.Election:
 
-		msg = &election.ElectionMessage{}
+	case protocol.Election:
+		msg = &election_definitions.ElectionMessage{}
+
+	case protocol.Heartbeat:
+		msg = &topology.HeartbeatMessage{}
 
 	default:
 
@@ -984,17 +1133,17 @@ func (n *ClusterNode) isTreeLeaf() bool {
 //============================================================================//
 
 // Returns the state of this node during the election (Idle, Waiting for YoDown or Waiting for YoUp).
-func (n *ClusterNode) getElectionState() election.ElectionState {
+func (n *ClusterNode) getElectionState() election_definitions.ElectionState {
 	return n.electionCtx.GetState()
 }
 
 // Returns the status of this node during the current round of the election (Source, Internal Node, Sink, Leader or Lost).
-func (n *ClusterNode) getElectionStatus() election.ElectionStatus {
+func (n *ClusterNode) getElectionStatus() election_definitions.ElectionStatus {
 	return n.electionCtx.GetStatus()
 }
 
 // Switches to the given state.
-func (n *ClusterNode) switchToElectionState(state election.ElectionState) {
+func (n *ClusterNode) switchToElectionState(state election_definitions.ElectionState) {
 	n.electionCtx.SwitchToState(state)
 }
 
@@ -1016,15 +1165,15 @@ func (n *ClusterNode) stashFutureElectionProposal(sender node.NodeId, proposed n
 	n.electionCtx.StashFutureProposal(sender, proposed, roundEpoch)
 }
 
-func (n *ClusterNode) generateElectionId() election.ElectionId {
+func (n *ClusterNode) generateElectionId() election_definitions.ElectionId {
 	return election.GenerateId(n.incrementClock(), n.getId())
 }
-func (n *ClusterNode) setElectionId(id election.ElectionId) {
+func (n *ClusterNode) setElectionId(id election_definitions.ElectionId) {
 	n.electionCtx.SetId(id)
 }
 
 func (n *ClusterNode) nextElectionRound() {
 	n.logf("election", "Preparing for next round...")
 	n.electionCtx.NextRound()
-	n.logf("election", "Context prepared, current round is %v and I am %s", n.currentElectionRound(), n.getElectionStatus().Readable())
+	n.logf("election", "Context prepared, current round is %v and I am %s", n.currentElectionRound(), n.getElectionStatus().String())
 }

@@ -10,6 +10,7 @@ package election
 
 import (
 	"fmt"
+	election_definitions "server/cluster/election/definitions"
 	"server/cluster/node"
 )
 
@@ -18,14 +19,15 @@ import (
 // To read about the context of the current election process, go to `election_context.go, electionContext`.
 // These information includes: The role of the node, the leader's ID and the ID's of the persistence nodes.
 type PostElectionContext struct {
-	role           node.NodeRole               // Role of the node, specifies what are the responsibilities of a particular node in the system.
-	leaderId       node.NodeId                 // Id of the leader node.
+	role           node.NodeRole // Role of the node, specifies what are the responsibilities of a particular node in the system.
+	leaderId       node.NodeId   // Id of the leader node.
+	electionId     election_definitions.ElectionId
 	persistenceIds map[node.NodeId]node.NodeId // Map of the persistence nodes. Maps each persistence node ID (leader included) to the ID of the next hop, that is, the neighboring node to follow to reach the destination.
 }
 
 // Creates a context with the specified role and leader ID
-func NewPostElectionContext(role node.NodeRole, leader node.NodeId) *PostElectionContext {
-	return &PostElectionContext{role, leader, make(map[node.NodeId]node.NodeId)}
+func NewPostElectionContext(role node.NodeRole, leader node.NodeId, electionId election_definitions.ElectionId) *PostElectionContext {
+	return &PostElectionContext{role, leader, electionId, make(map[node.NodeId]node.NodeId)}
 }
 
 // Adds a pair (persistence node id, next hop node) to the node, if the persistence node id doesn't already have a next hop associated.
@@ -72,6 +74,10 @@ func (p *PostElectionContext) GetLeader() node.NodeId {
 // Returns the node's role.
 func (p *PostElectionContext) GetRole() node.NodeRole {
 	return p.role
+}
+
+func (p *PostElectionContext) GetElectionId() election_definitions.ElectionId {
+	return p.electionId
 }
 
 // Returns true if a next hop for the given persistence node is set.

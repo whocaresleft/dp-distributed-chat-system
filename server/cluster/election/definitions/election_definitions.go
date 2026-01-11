@@ -1,4 +1,4 @@
-package election
+package election_definitions
 
 import (
 	"fmt"
@@ -63,7 +63,7 @@ const ( // Suppose i is this node and j is the other
 	Outgoing LinkDirection = true  // (i, j)
 )
 
-func (l *LinkDirection) inverse() LinkDirection {
+func (l *LinkDirection) Inverse() LinkDirection {
 	return !(*l)
 }
 
@@ -87,7 +87,7 @@ var readableStatuses = []string{
 	"Winner",
 }
 
-func (s ElectionStatus) Readable() string {
+func (s ElectionStatus) String() string {
 	return readableStatuses[uint(s)]
 }
 
@@ -107,7 +107,7 @@ var readableStates = []string{
 	"Waiting Yo Up",
 }
 
-func (s ElectionState) Readable() string {
+func (s ElectionState) String() string {
 	return readableStates[uint(s)]
 }
 
