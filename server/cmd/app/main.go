@@ -2,34 +2,62 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"server/cluster"
-	"server/cluster/node"
+	"strconv"
 )
 
 func main() {
-
-	ids := []node.NodeId{2, 3}
-	nodes := make(map[node.NodeId]*cluster.ClusterNode)
-
-	for _, id := range ids {
-		n, _ := cluster.NewClusterNode(id, 46000+uint16(id), true)
-		nodes[id] = n
+	args := os.Args
+	if len(args) < 2 {
+		return
 	}
+	p, err := strconv.ParseInt(args[1], 10, 64)
+	if err != nil {
+		return
+	}
+	switch p {
+	case 1:
+		n, _ := cluster.NewClusterNode(1, 46000+uint16(1), true)
+		go n.RunInputDispatcher()
+		go n.RunOutputDispatcher()
+		go n.JoinHandle()
+		go n.ElectionHandle()
+		wait()
+		n.AddNeighbor(2, "127.0.0.1:46002")
 
-	for _, node := range nodes {
-		go node.RunInputDispatcher()
-		go node.RunOutputDispatcher()
-		go node.JoinHandle()
-		go node.ElectionHandle()
+	case 2:
+		n, _ := cluster.NewClusterNode(2, 46000+uint16(2), true)
+		go n.RunInputDispatcher()
+		go n.RunOutputDispatcher()
+		go n.JoinHandle()
+		go n.ElectionHandle()
+
+		wait()
+		n.AddNeighbor(3, "127.0.0.1:46003")
+	case 3:
+		n, _ := cluster.NewClusterNode(3, 46000+uint16(3), true)
+		go n.RunInputDispatcher()
+		go n.RunOutputDispatcher()
+		go n.JoinHandle()
+		go n.ElectionHandle()
+
+		wait()
+		n.AddNeighbor(1, "127.0.0.1:46001")
+	case 4:
+		n, _ := cluster.NewClusterNode(4, 46000+uint16(4), true)
+		go n.RunInputDispatcher()
+		go n.RunOutputDispatcher()
+		go n.JoinHandle()
+		go n.ElectionHandle()
+
+		wait()
+		n.AddNeighbor(2, "127.0.0.1:46002")
+		n.AddNeighbor(3, "127.0.0.1:46003")
 	}
 
 	wait()
-	// Build the network
-
-	nodes[2].AddNeighbor(3, "127.0.0.1:46003")
-
-	wait()
-	fmt.Print("Done...")
+	fmt.Printf("Done...")
 }
 
 func wait() {

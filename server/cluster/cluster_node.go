@@ -310,15 +310,26 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 		receivedElectionId := message.ElectionId
 		currentElectionId := n.electionCtx.GetId()
 
-		if currentElectionId != receivedElectionId { // Is this vote for the current election
-			if election.IsStrongerThan(currentElectionId, receivedElectionId) {
-				n.logf("election", "Proposal message received by %d for a weaker, older, election %v, ignoring.", sender, receivedElectionId)
-				return
+		cmp := receivedElectionId.Compare(currentElectionId)
+
+		if cmp < 0 {
+			n.logf("election", "Proposal message received by %d for a weaker, older, election %v, ignoring.", sender, receivedElectionId)
+			return
+		}
+		if cmp > 0 {
+			n.logf("election", "Proposal message received by %d for a stronger, newer, election %v, catching up.", sender, receivedElectionId)
+			n.ElectionSetupWithID(receivedElectionId)
+
+			for _, neighbor := range n.neighborList() {
+				if neighbor == sender {
+					n.logf("election", "Ignoring %d as it is the sender", neighbor)
+					continue
+				}
+				n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, receivedElectionId))
+				n.logf("election", "Sent START message to %d", neighbor)
 			}
-			if election.IsStrongerThan(receivedElectionId, currentElectionId) {
-				n.logf("election", "Proposal message received by %d for a stronger, newer, election %v, catching up.", sender, receivedElectionId)
-				n.ElectionSetupWithID(receivedElectionId)
-			}
+			n.enterYoDown()
+			return
 		}
 
 		currentRound := n.currentElectionRound()
@@ -351,8 +362,8 @@ func (n *ClusterNode) handleWaitingYoDown(message *election.ElectionMessage) {
 			}
 
 		case election.Sink:
-			n.logf("election", "Stored the proposal of %d by %d, waiting for %d more proposals...", proposed, sender, n.electionCtx.GetAwaitedProposals())
 			n.electionCtx.StoreProposal(sender, node.NodeId(proposed))
+			n.logf("election", "Stored the proposal of %d by %d, waiting for %d more proposals...", proposed, sender, n.electionCtx.GetAwaitedProposals())
 
 			if !n.electionCtx.ReceivedAllProposals() {
 				return
@@ -388,15 +399,26 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 		receivedElectionId := message.ElectionId
 		currentElectionId := n.electionCtx.GetId()
 
-		if currentElectionId != receivedElectionId { // Is this vote for the current election
-			if election.IsStrongerThan(currentElectionId, receivedElectionId) {
-				n.logf("election", "Vote message received for a weaker, older, election %v, ignoring.", receivedElectionId)
-				return
+		cmp := receivedElectionId.Compare(currentElectionId)
+
+		if cmp < 0 {
+			n.logf("election", "Proposal message received by %d for a weaker, older, election %v, ignoring.", sender, receivedElectionId)
+			return
+		}
+		if cmp > 0 {
+			n.logf("election", "Proposal message received by %d for a stronger, newer, election %v, catching up.", sender, receivedElectionId)
+			n.ElectionSetupWithID(receivedElectionId)
+
+			for _, neighbor := range n.neighborList() {
+				if neighbor == sender {
+					n.logf("election", "Ignoring %d as it is the sender", neighbor)
+					continue
+				}
+				n.SendElectionMessage(neighbor, n.newStartMessage(neighbor, receivedElectionId))
+				n.logf("election", "Sent START message to %d", neighbor)
 			}
-			if election.IsStrongerThan(receivedElectionId, currentElectionId) {
-				n.logf("election", "Vote message received for a stronger, newer, election %v, catching up.", receivedElectionId)
-				n.ElectionSetupWithID(receivedElectionId)
-			}
+			n.enterYoDown()
+			return
 		}
 
 		currentRound := n.electionCtx.CurrentRound()
@@ -446,6 +468,8 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 					n.electionCtx.PruneThisRound(inNode)
 				}
 			}
+			n.nextElectionRound()
+			n.enterYoDown()
 
 		case election.Source:
 			n.logf("election", "Stored the vote of %v by %d, waiting for %d more proposals...  Pruning asked: %v", vote, sender, n.electionCtx.GetAwaitedProposals(), pruneChild)
@@ -458,13 +482,12 @@ func (n *ClusterNode) handleWaitingYoUp(message *election.ElectionMessage) {
 				return
 			}
 			n.logf("election", "Got all votes")
+			n.nextElectionRound()
+			n.enterYoDown()
 
 		case election.Sink:
 			// Nothing, sinks don't wait on YoUP
 		}
-
-		n.electionCtx.NextRound()
-		n.enterYoDown()
 
 	case election.Start:
 		n.handleStartMessage(message)
@@ -479,12 +502,15 @@ func (n *ClusterNode) enterYoDown() {
 	switch n.getElectionStatus() {
 
 	case election.Winner:
+		n.logf("election", "I won the election, sending my ID to others")
 		for _, neighbor := range n.neighborList() {
 			n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, n.getId()))
+			n.logf("election", "Sent leader message to %d", neighbor)
 		}
 		n.endElection(node.Leader, n.getId())
 		n.switchToElectionState(election.Idle)
 	case election.Loser:
+		n.logf("election", "I lost the election")
 		n.switchToElectionState(election.Idle)
 
 	case election.Source:
@@ -499,7 +525,7 @@ func (n *ClusterNode) enterYoDown() {
 		n.logf("election", "Internal node: waiting for inlinks to send proposals")
 		n.switchToElectionState(election.WaitingYoDown)
 	case election.Sink:
-		n.logf("election", "Source: waiting for inlinks to send proposals")
+		n.logf("election", "Sink: waiting for inlinks to send proposals")
 		n.switchToElectionState(election.WaitingYoDown)
 	}
 }
@@ -548,7 +574,7 @@ func (n *ClusterNode) enterYoUp() {
 			}
 		}
 
-		n.electionCtx.NextRound()
+		n.nextElectionRound()
 		n.switchToElectionState(election.WaitingYoDown)
 
 	case election.InternalNode:
@@ -568,14 +594,10 @@ func (n *ClusterNode) ElectionSetup() election.ElectionId {
 	return id
 }
 
-func (n *ClusterNode) ConfirmElectionId() {
-	n.electionCtx.SetId(n.electionCtx.GetIdProposal())
-}
-
 func (n *ClusterNode) ElectionSetupWithID(id election.ElectionId) {
 	n.logf("election", "Resetting the election context...")
 	n.electionCtx.Reset(n.incrementClock())
-	n.electionCtx.SetId(id)
+	n.setElectionId(id)
 
 	// We can skip the ID exchange thanks to the topology creation
 
@@ -594,6 +616,7 @@ func (n *ClusterNode) ElectionSetupWithID(id election.ElectionId) {
 
 	n.electionCtx.UpdateStatus()
 	n.logf("election", "Calculating election %v status: I am %v", id, n.getElectionStatus().Readable())
+
 	n.electionCtx.FirstRound()
 }
 
@@ -611,21 +634,28 @@ func (n *ClusterNode) handleStartMessage(message *election.ElectionMessage) erro
 	h := message.GetHeader()
 	sender, _ := extractConnectionIdentifier(h.Sender)
 	electionId := election.ElectionId(message.Body[0])
-	myId := n.electionCtx.GetIdProposal()
 
-	if electionId == myId {
+	localBestId := n.electionCtx.GetId()
+	myIdProposal := n.electionCtx.GetIdProposal()
+
+	if myIdProposal.Compare(localBestId) > 0 {
+		localBestId = myIdProposal
+	}
+
+	cmp := electionId.Compare(localBestId)
+	if cmp == 0 {
 		if !n.hasReceivedElectionStart() {
 			n.logf("election", "%d sent me my own start back. Considering it as (ACK)", sender)
 			n.setElectionStartReceived()
 		}
 		return nil
 	}
-	if election.IsStrongerThan(myId, electionId) {
-		n.logf("election", "%d sent me a weaker START message: received{%s}, mine{%s}. Ignoring it.", sender, electionId, myId)
+	if cmp < 0 {
+		n.logf("election", "%d sent me a weaker START message: received{%s}, mine{%s}. Ignoring it.", sender, electionId, localBestId)
 		return nil
 	}
 
-	n.logf("election", "%d sent me a stronger START message: received{%s}, mine{%s}. Switching to this one", sender, electionId, myId)
+	n.logf("election", "%d sent me a stronger START message: received{%s}, mine{%s}. Switching to this one", sender, electionId, localBestId)
 	n.setElectionStartReceived()
 
 	n.logf("election", "Preparing election context for election {%s}...", electionId)
@@ -991,4 +1021,10 @@ func (n *ClusterNode) generateElectionId() election.ElectionId {
 }
 func (n *ClusterNode) setElectionId(id election.ElectionId) {
 	n.electionCtx.SetId(id)
+}
+
+func (n *ClusterNode) nextElectionRound() {
+	n.logf("election", "Preparing for next round...")
+	n.electionCtx.NextRound()
+	n.logf("election", "Context prepared, current round is %v and I am %s", n.currentElectionRound(), n.getElectionStatus().Readable())
 }

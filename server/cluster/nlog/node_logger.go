@@ -37,7 +37,7 @@ func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
 }
 
 func (n *NodeLogger) AddLogger(filename string) error {
-	file, err := os.OpenFile(fmt.Sprintf("NODE_%d/%s.log", n.id, filename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(fmt.Sprintf("NODE_%d/%s.log", n.id, filename), os.O_WRONLY|os.O_APPEND|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}

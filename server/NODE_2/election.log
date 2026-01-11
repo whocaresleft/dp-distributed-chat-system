@@ -1,22 +1,47 @@
-[[Node 2] election]: 2026/01/10 19:11:25 {0}. Started election handle
-[[Node 2] election]: 2026/01/10 19:11:25 {0}. Awaiting election message...
-[[Node 2] election]: 2026/01/10 19:11:35 {6}. Election message received: Header{Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{5}}, MessageType{0}, ElectionID{}, Round{0}, Body{[3-3]}
-[[Node 2] election]: 2026/01/10 19:11:35 {6}. Current state is Idle
-[[Node 2] election]: 2026/01/10 19:11:35 {6}. 3 sent me a stronger START message: received{3-3}, mine{}. Switching to this one
-[[Node 2] election]: 2026/01/10 19:11:35 {6}. Preparing election context for election {3-3}...
-[[Node 2] election]: 2026/01/10 19:11:35 {6}. Resetting the election context...
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Orienting the nodes with current neighbors
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. 3: Outgoing
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Calculating election 3-3 status: I am Source
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Finished setup for the election context
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Ignoring 3 as it is the sender
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Yo down started for round 0
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Source: Sending my id to out nodes...
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Sent to 3
-[[Node 2] election]: 2026/01/10 19:11:35 {7}. Awaiting election message...
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Election message received: Header{Sender{node-3}, Destination{node-2}, Type{1}, Timestamp{10}}, MessageType{2}, ElectionID{3-3}, Round{0}, Body{[true true]}
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Current state is Waiting Yo Up
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Stored the vote of true by 3, waiting for 0 more proposals...  Pruning asked: true
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Got all votes
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Yo down started for round 1
-[[Node 2] election]: 2026/01/10 19:11:35 {11}. Awaiting election message...
+[[Node 2] election]: 2026/01/11 04:52:26 {0}. Started election handle
+[[Node 2] election]: 2026/01/11 04:52:26 {0}. Awaiting election message...
+[[Node 2] election]: 2026/01/11 04:52:34 {2}. Preparing election context...
+[[Node 2] election]: 2026/01/11 04:52:34 {3}. Resetting the election context...
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Orienting the nodes with current neighbors
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. 1: Incoming
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Calculating election 3-2 status: I am Sink
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Setup the election context
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Sent START message to 1
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Sent START to all my neighbors, waiting confirm or earlier election proposal
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Yo down started for round 0
+[[Node 2] election]: 2026/01/11 04:52:34 {4}. Sink: waiting for inlinks to send proposals
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Election message received: Header{Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{8}}, MessageType{1}, ElectionID{3-2}, Round{0}, Body{[1]}
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Current state is Waiting Yo Down
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Stored the proposal of 1 by 1, waiting for 0 more proposals...
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Got all proposals, calculating the smallest ID... {1}
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Yo up started for round 0
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. SINK: Got all the proposals, need to send votes back
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. I have a single parent, need pruning
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Sent vote true to 1
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Preparing for next round...
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Context prepared, current round is 1 and I am Loser
+[[Node 2] election]: 2026/01/11 04:52:34 {9}. Awaiting election message...
+[[Node 2] election]: 2026/01/11 04:52:34 {13}. Election message received: Header{Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{12}}, MessageType{3}, ElectionID{3-2}, Round{1}, Body{[1]}
+[[Node 2] election]: 2026/01/11 04:52:34 {13}. Current state is Waiting Yo Down
+[[Node 2] election]: 2026/01/11 04:52:34 {13}. Closing my election context...
+[[Node 2] election]: 2026/01/11 04:52:34 {13}. Awaiting election message...
+[[Node 2] election]: 2026/01/11 04:52:43 {14}. Preparing election context...
+[[Node 2] election]: 2026/01/11 04:52:43 {15}. Resetting the election context...
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Orienting the nodes with current neighbors
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. 1: Incoming
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. 4: Outgoing
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Calculating election 15-2 status: I am InternalNode
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Setup the election context
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Sent START message to 1
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Sent START message to 4
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Sent START to all my neighbors, waiting confirm or earlier election proposal
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Yo down started for round 0
+[[Node 2] election]: 2026/01/11 04:52:43 {16}. Internal node: waiting for inlinks to send proposals
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Election message received: Header{Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{20}}, MessageType{1}, ElectionID{15-2}, Round{0}, Body{[1]}
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Current state is Waiting Yo Down
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Stored the proposal of 1 by 1, waiting for 0 more proposals...
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Got all proposals, calculating the smallest ID... {1}
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Forwarding proposal to 4
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Yo up started for round 0
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Internal node: waiting for outlinks to send votes
+[[Node 2] election]: 2026/01/11 04:52:43 {21}. Awaiting election message...

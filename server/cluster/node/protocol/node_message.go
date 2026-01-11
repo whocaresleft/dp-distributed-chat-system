@@ -9,6 +9,15 @@ const (
 	Election
 )
 
+var readableType = []string{
+	"Join",
+	"Election",
+}
+
+func (t MessageType) Readable() string {
+	return readableType[int(t)]
+}
+
 type MessageHeader struct {
 	Sender      string      `json:"sender"`
 	Destination string      `json:"destination"`
@@ -27,7 +36,7 @@ func (h *MessageHeader) MarkTimestamp(timestamp uint64) {
 }
 
 func (h *MessageHeader) String() string {
-	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%d}, Timestamp{%d}", h.Sender, h.Destination, uint8(h.Type), h.TimeStamp)
+	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%s}, Timestamp{%d}", h.Sender, h.Destination, h.Type.Readable(), h.TimeStamp)
 }
 
 type Message interface {

@@ -11,8 +11,6 @@ package election
 import (
 	"fmt"
 	"server/cluster/node"
-	"strconv"
-	"strings"
 )
 
 type roundContext struct {
@@ -157,43 +155,6 @@ func (e *ElectionContext) GetAwaitedVotes() uint {
 	return e.currentRound.awaitedVotes
 }
 
-func IsStrongerThan(first, second ElectionId) bool {
-	if first == InvalidId { // If first is invalid, it can't be stronger
-		return false
-	}
-	if second == InvalidId { // If second is invalid, first is stronger
-		return true
-	}
-
-	clock1, discriminant1, _ := parseElectionId(first)
-	clock2, discriminant2, _ := parseElectionId(second)
-
-	if clock1 == clock2 {
-		return discriminant1 < discriminant2
-	}
-	return clock1 > clock2
-}
-
-func parseElectionId(id ElectionId) (uint64, node.NodeId, error) {
-
-	clockString, discriminantString, ok := strings.Cut(string(id), "-")
-	if !ok {
-		return 0, 0, fmt.Errorf("Id was mal-formatted")
-	}
-
-	clock, err := strconv.ParseInt(clockString, 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	discriminant, _ := strconv.ParseInt(discriminantString, 10, 64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return uint64(clock), node.NodeId(discriminant), nil
-}
-
 func (e *ElectionContext) GetAllProposals() map[node.NodeId]node.NodeId {
 	return e.currentRound.receivedProposals
 }
@@ -326,11 +287,14 @@ func (e *ElectionContext) UpdateStatus() {
 }
 
 func (e *ElectionContext) updateLinks() {
-
 	var toFlip []node.NodeId
 
+	fmt.Println("Entering update links")
+
+	fmt.Printf("Iterating over OUTNODES %v\n", e.OutNodes())
 	for _, outNode := range e.OutNodes() {
-		vote, err := e.DetermineVote(outNode)
+		vote, err := e.RetrieveVote(outNode)
+		fmt.Printf("ID: %v - His vote: %v, is it valid? %v\n", outNode, vote, err)
 		if err != nil {
 			continue
 		}
@@ -339,8 +303,10 @@ func (e *ElectionContext) updateLinks() {
 		}
 	}
 
+	fmt.Printf("Iterating over INNODES %v\n", e.InNodes())
 	for _, inNode := range e.InNodes() {
-		vote, err := e.RetrieveVote(inNode)
+		vote, err := e.DetermineVote(inNode)
+		fmt.Printf("ID: %v - My vote to him: %v, is it valid? %v\n", inNode, vote, err)
 		if err != nil {
 			continue
 		}
@@ -371,7 +337,6 @@ func (e *ElectionContext) StoreProposal(sender node.NodeId, proposed node.NodeId
 	if err == nil {
 		return fmt.Errorf("Can't store, %d already proposed", sender)
 	}
-
 	e.currentRound.awaitedProposals--
 	e.currentRound.receivedProposals[sender] = proposed
 	if proposed < e.currentRound.smallestId {
@@ -449,6 +414,7 @@ func (e *ElectionContext) StoreVote(sender node.NodeId, vote bool) error {
 	e.currentRound.awaitedVotes--
 	e.currentRound.receivedVotes[sender] = vote
 	e.currentRound.forwardedVote = e.currentRound.forwardedVote && vote
+
 	return nil
 }
 

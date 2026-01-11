@@ -2,7 +2,10 @@ package election
 
 import (
 	"fmt"
+	"server/cluster/node"
 	"server/cluster/node/protocol"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -12,6 +15,48 @@ type LinkDirection bool
 type ElectionId string
 
 const InvalidId ElectionId = ""
+
+type Comparator int8
+
+func (e ElectionId) Compare(other ElectionId) int64 {
+	if e == other {
+		return 0
+	}
+	if e == InvalidId {
+		return -1
+	}
+	if other == InvalidId {
+		return 1
+	}
+
+	clock1, discriminant1, _ := e.Parse()
+	clock2, discriminant2, _ := other.Parse()
+
+	if clock1 == clock2 {
+		return int64(discriminant2) - int64(discriminant1)
+	}
+	return int64(clock1 - clock2)
+}
+
+func (e ElectionId) Parse() (uint64, node.NodeId, error) {
+
+	clockString, discriminantString, ok := strings.Cut(string(e), "-")
+	if !ok {
+		return 0, 0, fmt.Errorf("Id was mal-formatted")
+	}
+
+	clock, err := strconv.ParseInt(clockString, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	discriminant, err := strconv.ParseInt(discriminantString, 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return uint64(clock), node.NodeId(discriminant), nil
+}
 
 const ( // Suppose i is this node and j is the other
 	Incoming LinkDirection = false // (j, i)
