@@ -5,13 +5,13 @@ import "fmt"
 type MessageType uint8
 
 const (
-	Join MessageType = iota
+	Topology MessageType = iota
 	Election
 	Heartbeat
 )
 
 var readableType = []string{
-	"Join",
+	"Topology",
 	"Election",
 	"Heartbeat",
 }
@@ -47,24 +47,32 @@ type Message interface {
 	String() string
 }
 
-type JoinMessage struct {
+const (
+	Jflags_JOIN   uint8 = 0b00000001
+	Jfags_ACK     uint8 = 0b00000010
+	Jflags_REJOIN uint8 = 0b00000100
+)
+
+type TopologyMessage struct {
 	Header  MessageHeader `json:"header"`
 	Address string        `json:"address"`
+	Flags   uint8         `json:"flags"`
 }
 
-func NewJoinMessage(h *MessageHeader, ip string) *JoinMessage {
-	return &JoinMessage{
+func NewTopologyMessage(h *MessageHeader, ip string, flags uint8) *TopologyMessage {
+	return &TopologyMessage{
 		Header:  *h,
 		Address: ip,
+		Flags:   flags,
 	}
 }
 
-func (j *JoinMessage) GetHeader() *MessageHeader {
+func (j *TopologyMessage) GetHeader() *MessageHeader {
 	return &j.Header
 }
-func (j *JoinMessage) SetHeader(h *MessageHeader) {
+func (j *TopologyMessage) SetHeader(h *MessageHeader) {
 	j.Header = *h
 }
-func (j *JoinMessage) String() string {
-	return fmt.Sprintf("Header{%s}, Address{%s}", j.Header.String(), j.Address)
+func (j *TopologyMessage) String() string {
+	return fmt.Sprintf("Header{%s}, Address{%s}, Flags{%v}", j.Header.String(), j.Address, j.Flags)
 }

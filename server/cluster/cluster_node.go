@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"server/cluster/election"
 	election_definitions "server/cluster/election/definitions"
 	"server/cluster/nlog"
@@ -20,6 +21,7 @@ import (
 	"server/cluster/topology"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -55,10 +57,10 @@ type ClusterNode struct {
 	config          *node.NodeConfig
 	topologyMan     *topology.TopologyManager
 	electionCtx     *election.ElectionContext
-	postElectionCtx *election.PostElectionContext
+	postElectionCtx atomic.Pointer[election.PostElectionContext]
 	treeMan         *topology.TreeManager
 
-	topologyInbox chan *protocol.JoinMessage
+	topologyInbox chan *protocol.TopologyMessage
 	electionInbox chan *election_definitions.ElectionMessage
 	outputChannel chan outMessage
 
@@ -96,7 +98,7 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 	logger.Logf("main", "Topology component correctly created")
 
 	electionInbox := make(chan *election_definitions.ElectionMessage, 500)
-	joinInbox := make(chan *protocol.JoinMessage, 500)
+	joinInbox := make(chan *protocol.TopologyMessage, 500)
 	outChan := make(chan outMessage, 500)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -112,7 +114,7 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 		config,
 		tp,
 		election.NewElectionContext(config.GetId()),
-		nil,
+		atomic.Pointer[election.PostElectionContext]{},
 		topology.NewTreeManager(),
 		joinInbox,
 		electionInbox,
@@ -161,6 +163,7 @@ func (n *ClusterNode) updateClock(received uint64) {
 func (n *ClusterNode) RunInputDispatcher() {
 
 	n.logf("main", "Started input dispatcher. Awaiting messages...")
+	defer n.logf("main", "FATAL: Input dispatcher has failed...")
 
 	for {
 		id, msg, err := n.recv()
@@ -177,14 +180,26 @@ func (n *ClusterNode) RunInputDispatcher() {
 		n.logf("heartbeat", "Message used as keepalive for %d, MARKING 3 ALIVE: %d", id, n.isAlive(3))
 
 		switch header.Type {
-		case protocol.Join:
-			if m, ok := msg.(*protocol.JoinMessage); ok {
+		case protocol.Topology:
+			if m, ok := msg.(*protocol.TopologyMessage); ok {
 				n.topologyInbox <- m
 			}
 
 		case protocol.Election:
 			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
 				n.electionInbox <- m
+			}
+
+		case protocol.Heartbeat:
+			if !n.IsNeighborsWith(id) {
+				n.logf("heartbeat", "I don't know %d, but he keeps sending heartbeats")
+				heartbeats, _ := n.topologyMan.IncreaseRandomHeartbeat(id)
+				if heartbeats >= 5 {
+					n.logf("heartbeat", "%d is persistent... Maybe it's an old neighbor, trying to REJOIN", id)
+					n.topologyMan.ResetRandomHeartbeats(id)
+					n.topologyMan.SetReAckJoinPending(id)
+					n.SendReJoinMessage(id)
+				}
 			}
 		}
 	}
@@ -195,6 +210,7 @@ func (n *ClusterNode) RunInputDispatcher() {
 func (n *ClusterNode) RunOutputDispatcher() {
 
 	n.logf("main", "Started output dispatcher. Awaiting messages to send...")
+	defer n.logf("main", "FATAL: Output dispatcher has failed...")
 
 	for {
 		select {
@@ -211,7 +227,7 @@ func (n *ClusterNode) RunOutputDispatcher() {
 	}
 }
 
-func (n *ClusterNode) RecvJoinMessage() *protocol.JoinMessage {
+func (n *ClusterNode) RecvTopologyMessage() *protocol.TopologyMessage {
 	return <-n.topologyInbox
 }
 
@@ -224,6 +240,64 @@ func (n *ClusterNode) RecvElectionMessage() *election_definitions.ElectionMessag
 // It sends an election message to the given node (based on ID). It sends the message onto the output channel.
 func (n *ClusterNode) SendElectionMessage(neighbor node.NodeId, msg protocol.Message) {
 	n.outputChannel <- outMessage{neighbor, msg}
+}
+
+func (n *ClusterNode) SendJoinMessage(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
+
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jflags_JOIN),
+	}
+}
+
+func (n *ClusterNode) SendJoinAckMessage(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
+
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jflags_JOIN|protocol.Jfags_ACK),
+	}
+}
+
+func (n *ClusterNode) SendAckMessagge(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
+
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jfags_ACK),
+	}
+}
+
+func (n *ClusterNode) SendReJoinMessage(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := "" // The other node should already know it
+
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jflags_JOIN|protocol.Jflags_REJOIN),
+	}
+}
+func (n *ClusterNode) SendReJoinAckMessage(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
+
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jflags_JOIN|protocol.Jfags_ACK|protocol.Jflags_REJOIN),
+	}
+}
+
+func (n *ClusterNode) SendReAckMessagge(neighbor node.NodeId) {
+	header := n.NewMessageHeader(neighbor, protocol.Topology)
+	address := ""
+	n.outputChannel <- outMessage{
+		neighbor,
+		protocol.NewTopologyMessage(header, address, protocol.Jfags_ACK|protocol.Jflags_REJOIN),
+	}
 }
 
 // It sends an heartbeat message to the given node (based on ID). It sends the message onto the output channel.
@@ -241,6 +315,9 @@ func (n *ClusterNode) SendHeartbeat(neighbor node.NodeId) {
 }
 
 func (n *ClusterNode) HeartbeatHandle() {
+	n.logf("heartbeat", "Heartbeat handle has started...")
+	defer n.logf("heartbeat", "FATAL: Heartbeat handle has failed...")
+
 	ticker := time.NewTicker(5 * time.Second)
 	for range ticker.C {
 		for _, neighbor := range n.neighborList() {
@@ -251,23 +328,139 @@ func (n *ClusterNode) HeartbeatHandle() {
 
 func (n *ClusterNode) JoinHandle() {
 	n.logf("join", "Started join handle")
+	defer n.logf("join", "FATAL: Join handle has failed...")
 	for {
 
 		n.logf("join", "Awaiting join message...")
-		message := n.RecvJoinMessage()
+		message := n.RecvTopologyMessage()
 		n.logf("join", "Join message received: %s", message.String())
 
-		proceed, err := n.handleEnteringNeighbor(message)
-		if err != nil {
-			n.logf("join", "False positive, the message was mal-formatted, ignoring it.")
-			continue
+		rejoin := message.Flags&protocol.Jflags_REJOIN > 0
+
+		if rejoin {
+			n.handleRejoin(message)
+		} else {
+			n.handleFirstTimeJoin(message)
 		}
 
-		if proceed {
-			n.logf("join", "We need to start a new election ASAP")
-			n.startElection()
-		}
+		//proceed, err := n.handleEnteringNeighbor(message)
+		//if err != nil {
+		//	n.logf("join", "False positive, the message was mal-formatted, ignoring it.")
+		//	continue
+		//}
+
+		//if proceed {
+		//	n.logf("join", "We need to start a new election ASAP")
+		//	n.startElection()
+		//}
 	}
+}
+
+// Sender -> JOIN -> Destination
+// Sender <- ACK, JOIN <- Destination
+// Sender -> ACK -> Destination
+func (n *ClusterNode) handleFirstTimeJoin(msg *protocol.TopologyMessage) error {
+	sourceId, err := extractConnectionIdentifier(msg.GetHeader().Sender)
+	if err != nil {
+		// Mal-formatted, skiphandleEnteringN
+		return err
+	}
+
+	if msg.Flags&protocol.Jflags_JOIN > 0 {
+
+		if msg.Flags&protocol.Jfags_ACK > 0 {
+			// This is a JOIN-ACK message
+			// send ack
+
+			n.logf("join", "%d sent a JOIN-ACK message: %v", sourceId, msg)
+
+			n.topologyMan.MarkAckJoin(sourceId)
+			n.markAlive(sourceId)
+			n.SendAckMessagge(sourceId)
+			return nil
+		}
+
+		// This is a JOIN message
+		// mark node as possible neighbor, send ack-join, wait for ack
+
+		n.logf("join", "%d sent a JOIN message: %v", sourceId, msg)
+		n.topologyMan.SetAckPending(sourceId, msg.Address)
+
+		n.SendJoinAckMessage(sourceId)
+		return nil
+	}
+
+	if msg.Flags&protocol.Jfags_ACK > 0 {
+		// This is an ACK message
+
+		n.logf("join", "%d sent a ACK message: %v", sourceId, msg)
+
+		n.topologyMan.MarkAck(sourceId)
+		n.markAlive(sourceId)
+
+		postCtx := n.postElectionCtx.Load()
+		// If we are not dealing with an election, we send the current leader
+		if n.getElectionState() == election_definitions.Idle && postCtx != nil {
+			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
+
+			n.SendCurrentLeader(sourceId)
+			return nil
+		}
+
+		// Otherwise, send start
+		n.startElection()
+		return nil
+	}
+	return nil
+}
+
+func (n *ClusterNode) handleRejoin(msg *protocol.TopologyMessage) error {
+	sourceId, err := extractConnectionIdentifier(msg.GetHeader().Sender)
+	if err != nil {
+		// Mal-formatted, skiphandleEnteringN
+		return err
+	}
+
+	if msg.Flags&protocol.Jflags_JOIN > 0 {
+
+		if msg.Flags&protocol.Jfags_ACK > 0 {
+			// This is a REJOIN-ACK message
+			// send ack
+
+			n.logf("join", "%d sent a JOIN-ACK + REJOIN message: %v", sourceId, msg)
+
+			n.topologyMan.MarkReAckJoin(sourceId, msg.Address)
+			n.SendReAckMessagge(sourceId)
+			return nil
+		}
+
+		// This is a REJOIN message
+		// mark node as possible neighbor, send ack-join, wait for ack
+
+		n.logf("join", "%d sent a JOIN + REJOIN message: %v", sourceId, msg)
+		// The neighbor might be turning on again => send ack + rejoin
+		n.topologyMan.SetReAckPending(sourceId)
+		n.SendReJoinAckMessage(sourceId)
+		return nil
+	}
+
+	if msg.Flags&protocol.Jfags_ACK > 0 {
+		// This is an RE-ACK message
+
+		n.logf("join", "%d sent a ACK + REJOIN message: %v", sourceId, msg)
+		n.topologyMan.MarkReAck(sourceId)
+
+		postCtx := n.postElectionCtx.Load()
+		// If we are not dealing with an election, we send the current leader
+		if n.getElectionState() == election_definitions.Idle && postCtx != nil {
+			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
+
+			n.SendCurrentLeader(sourceId)
+			return nil
+		}
+		return nil
+	}
+	return nil
 }
 
 func (n *ClusterNode) startElection() {
@@ -291,11 +484,12 @@ func (n *ClusterNode) startElection() {
 func (n *ClusterNode) ElectionHandle() {
 
 	n.logf("election", "Started election handle")
+	defer n.logf("election", "FATAL: Election handle has failed...")
 
 	n.switchToElectionState(election_definitions.Idle)
 
 	for {
-		n.logf("election", "Awaiting election message (or timeout)...")
+		n.logf("election", "Awaiting election message...")
 		state := n.getElectionState()
 
 		select {
@@ -331,9 +525,7 @@ func (n *ClusterNode) ElectionHandle() {
 			case election_definitions.WaitingYoUp:
 				n.handleYoUpTimeout()
 			case election_definitions.Idle:
-				if n.postElectionCtx != nil {
-					n.handlePossibleLeaderTimeout()
-				}
+				n.handleIdleTimeout()
 			}
 		}
 
@@ -342,6 +534,7 @@ func (n *ClusterNode) ElectionHandle() {
 
 func (n *ClusterNode) handleYoDownTimeout() {
 
+	fmt.Printf("%v\n\n", n.electionCtx.InNodes())
 	for _, node := range n.electionCtx.InNodes() {
 		_, err := n.electionCtx.RetrieveProposal(node)
 		if err != nil { // Not proposed, i could add a map [node]counter. Counting (or not counting ..ADFBHS) the timeouts, if you dont vote but you already game me 50 heartbeats... dude wake up
@@ -350,12 +543,20 @@ func (n *ClusterNode) handleYoDownTimeout() {
 				n.startElection()
 				return
 			}
+			n.electionCtx.IncreaseTimeout(node)
+			faulty, _ := n.electionCtx.IsFaulty(node)
+			if faulty {
+				n.logf("election", "%d is ON, but won't give election messages... sending JOIN to wake him up", node)
+				//n.sendToNeighbor(node, n.newTopologyMessage(node))
+				return
+			}
 		}
 	}
 }
 
 func (n *ClusterNode) handleYoUpTimeout() {
 
+	fmt.Printf("%v\n\n", n.electionCtx.OutNodes())
 	for _, node := range n.electionCtx.OutNodes() {
 		_, err := n.electionCtx.RetrieveVote(node)
 		if err != nil {
@@ -364,19 +565,36 @@ func (n *ClusterNode) handleYoUpTimeout() {
 				n.startElection()
 				return
 			}
+			n.electionCtx.IncreaseTimeout(node)
+			faulty, _ := n.electionCtx.IsFaulty(node)
+			if faulty {
+				n.logf("election", "%d is ON, but won't give election messages... sending JOIN to wake him up", node)
+				//n.sendToNeighbor(node, n.newTopologyMessage(node))
+				return
+			}
 		}
 	}
 }
 
-func (n *ClusterNode) handlePossibleLeaderTimeout() {
-	leaderId := n.postElectionCtx.GetLeader()
-	if n.getId() == leaderId {
-		return
-	}
-	n.logf("heartbeat", "Am i neighbors with %d? %v", leaderId, n.IsNeighborsWith(leaderId))
-	if n.IsNeighborsWith(leaderId) && !n.isAlive(leaderId) {
-		n.logf("election", "Leader is OFF. New election MUST START")
-		n.startElection()
+func (n *ClusterNode) handleIdleTimeout() {
+
+	postCtx := n.postElectionCtx.Load()
+	if postCtx != nil {
+		leaderId := postCtx.GetLeader()
+		if n.getId() == leaderId {
+			return
+		}
+		n.logf("heartbeat", "Am i neighbors with %d? %v", leaderId, n.IsNeighborsWith(leaderId))
+		if n.IsNeighborsWith(leaderId) && !n.isAlive(leaderId) {
+
+			postCtx.IncreaseLeaderTimeouts()
+			if postCtx.IsLeaderTimeoutAcceptable() {
+				n.logf("election", "Leader has not responded for %d time now")
+			} else {
+				n.logf("election", "Leader is considered OFF. New election MUST start")
+				n.startElection()
+			}
+		}
 	}
 }
 
@@ -386,9 +604,10 @@ func (n *ClusterNode) handleIdleState(message *election_definitions.ElectionMess
 
 	case election_definitions.Start: // A node sent START because a neighbor received JOIN or START
 
-		if n.postElectionCtx != nil {
+		postCtx := n.postElectionCtx.Load()
+		if postCtx != nil {
 
-			electionId := n.postElectionCtx.GetElectionId()
+			electionId := postCtx.GetElectionId()
 			receivedId := election_definitions.ElectionId(message.Body[0]) // A start message has the electionId proposal in the body
 
 			cmp := electionId.Compare(receivedId)
@@ -408,8 +627,9 @@ func (n *ClusterNode) handleIdleState(message *election_definitions.ElectionMess
 		n.handleStartMessage(message)
 
 	case election_definitions.Leader:
-		if n.postElectionCtx != nil {
-			electionId := n.postElectionCtx.GetElectionId()
+		postCtx := n.postElectionCtx.Load()
+		if postCtx != nil {
+			electionId := postCtx.GetElectionId()
 			receivedId := message.ElectionId
 
 			cmp := electionId.Compare(receivedId)
@@ -422,8 +642,9 @@ func (n *ClusterNode) handleIdleState(message *election_definitions.ElectionMess
 		n.handleLeaderMessage(message)
 
 	case election_definitions.Proposal, election_definitions.Vote:
-		if n.postElectionCtx != nil {
-			cmp := n.postElectionCtx.GetElectionId().Compare(message.ElectionId)
+		postCtx := n.postElectionCtx.Load()
+		if postCtx != nil {
+			cmp := postCtx.GetElectionId().Compare(message.ElectionId)
 			if cmp > 0 {
 				n.logf("election", "Received a proposal/vote for an older election, ignoring")
 				return
@@ -659,11 +880,12 @@ func (n *ClusterNode) enterYoDown() {
 
 	case election_definitions.Winner:
 		n.logf("election", "I won the election, sending my ID to others")
+		electionId := n.electionCtx.GetId()
 		for _, neighbor := range n.neighborList() {
-			n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, n.getId()))
+			n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, n.getId(), electionId))
 			n.logf("election", "Sent leader message to %d", neighbor)
 		}
-		n.endElection(node.Leader, n.getId())
+		n.endElection(node.Leader, n.getId(), electionId)
 		n.switchToElectionState(election_definitions.Idle)
 	case election_definitions.Loser:
 		n.logf("election", "I lost the election")
@@ -780,7 +1002,7 @@ func (n *ClusterNode) ElectionSetupWithID(id election_definitions.ElectionId) {
 	n.electionCtx.FirstRound()
 }
 
-func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.JoinMessage) (proceed bool, err error) {
+func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.TopologyMessage) (proceed bool, err error) {
 	sourceId, err := extractConnectionIdentifier(msg.GetHeader().Sender)
 	if err != nil {
 		// Mal-formatted, skiphandleEnteringN
@@ -790,12 +1012,15 @@ func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.JoinMessage) (proceed
 
 	wasAlive := n.isAlive(sourceId)
 	n.markAlive(sourceId)
-	if !wasAlive { // or was faulty {
+	faulty, _ := n.electionCtx.IsFaulty(sourceId)
+	if !wasAlive || faulty {
 		n.logf("join", "Node %d is ON: %v", sourceId, n.isAlive(sourceId))
+		n.electionCtx.NoMoreFaulty(sourceId)
 
 		// is there a current election?
-		if n.getElectionState() == election_definitions.Idle && n.postElectionCtx != nil { // No we are not dealing with an election, and one was already done at least
-			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx)
+		postCtx := n.postElectionCtx.Load()
+		if n.getElectionState() == election_definitions.Idle && postCtx != nil { // No we are not dealing with an election, and one was already done at least
+			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
 
 			n.SendCurrentLeader(sourceId)
 			return false, nil
@@ -806,8 +1031,11 @@ func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.JoinMessage) (proceed
 }
 
 func (n *ClusterNode) SendCurrentLeader(neighbor node.NodeId) {
-	electionMsg := n.newLeaderMessage(neighbor, n.postElectionCtx.GetLeader()).(*election_definitions.ElectionMessage)
-	electionMsg.ElectionId = n.postElectionCtx.GetElectionId()
+	postCtx := n.postElectionCtx.Load()
+	electionMsg := n.newLeaderMessage(neighbor, postCtx.GetLeader(), postCtx.GetElectionId()).(*election_definitions.ElectionMessage)
+	if electionMsg.ElectionId == election_definitions.InvalidId {
+		log.Fatal("The electionId in post election context is invalid")
+	}
 	n.SendElectionMessage(neighbor, electionMsg)
 }
 
@@ -857,23 +1085,34 @@ func (n *ClusterNode) handleStartMessage(message *election_definitions.ElectionM
 
 func (n *ClusterNode) handleLeaderMessage(message *election_definitions.ElectionMessage) error {
 
-	if n.postElectionCtx != nil {
-		if message.ElectionId.Compare(n.postElectionCtx.GetElectionId()) < 0 {
+	postCtx := n.postElectionCtx.Load()
+
+	if postCtx != nil {
+		if message.ElectionId.Compare(postCtx.GetElectionId()) < 0 {
 			n.logf("election", "Someone, %s, sent me a LEADER message for an older election: %s", message.Header.Sender, message.ElectionId)
 			return nil
 		}
 	}
 
-	if n.electionCtx.GetId().Compare(message.ElectionId) == 0 && n.electionCtx.HasReceivedLeader() {
-		n.logf("election", "Someone, %s, sent me a LEADER message for the current election %s. I have already received it.", message.Header.Sender, message.ElectionId)
-		return nil
-	}
-
-	n.logf("election", "Someone, %s, sent me a LEADER message for the current election: %s", message.Header.Sender, message.ElectionId)
-
+	currentId := n.electionCtx.GetId()
+	receivedId := message.ElectionId
 	sender, err := extractConnectionIdentifier(message.GetHeader().Sender)
 	if err != nil {
 		return err
+	}
+
+	cmp := currentId.Compare(receivedId)
+	switch {
+	case cmp > 0:
+		n.logf("election", "Received a leader message, by %d, for an older election (mine: %s, received: %s) Ignoring.", sender, currentId, receivedId)
+		return nil
+	case cmp == 0:
+		if n.electionCtx.HasReceivedLeader() {
+			n.logf("election", "Received a leader message, by %d, for the current election (mine: %s, received: %s) Confirming.", sender, currentId, receivedId)
+			return nil
+		}
+	case cmp < 0:
+		n.logf("election", "Received a leader message, by %d, for a newer election (mine: %s, received: %s) Accepting this one.", sender, currentId, receivedId)
 	}
 
 	leaderId, err := strconv.ParseUint(message.Body[0], 10, 64)
@@ -881,14 +1120,16 @@ func (n *ClusterNode) handleLeaderMessage(message *election_definitions.Election
 		return err
 	}
 
-	n.logf("election", "%d said it was leader. closing my election context...", leaderId)
-	n.endElection(node.Follower, node.NodeId(leaderId))
+	n.endElection(node.Follower, node.NodeId(leaderId), message.ElectionId)
+	n.logf("election", "%d said it was leader. closing my election context... with %v", leaderId, n.postElectionCtx.Load())
 	for _, neighbor := range n.neighborList() {
 		if neighbor == sender || neighbor == node.NodeId(leaderId) {
 			continue
 		}
-		n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, node.NodeId(leaderId)))
-		n.logf("election", "Sent new Leader (%d) message to %d", leaderId, neighbor)
+
+		msg := n.newLeaderMessage(neighbor, node.NodeId(leaderId), message.ElectionId)
+		n.SendElectionMessage(neighbor, msg)
+		n.logf("election", "Sent new Leader (%d) message to %d.", leaderId, msg)
 	}
 
 	return nil
@@ -899,13 +1140,6 @@ func (n *ClusterNode) NewMessageHeader(neighbor node.NodeId, mType protocol.Mess
 		n.connectionIdentifier(),
 		connectionIdentifier(neighbor),
 		mType,
-	)
-}
-
-func (n *ClusterNode) newJoinMessage(neighbor node.NodeId) protocol.Message {
-	return protocol.NewJoinMessage(
-		n.NewMessageHeader(neighbor, protocol.Join),
-		fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort()),
 	)
 }
 
@@ -940,20 +1174,22 @@ func (n *ClusterNode) newVoteMessage(neighbor node.NodeId, vote, prune bool) pro
 		n.electionCtx.CurrentRound(),
 	)
 }
-func (n *ClusterNode) newLeaderMessage(neighbor node.NodeId, leaderId node.NodeId) protocol.Message {
+func (n *ClusterNode) newLeaderMessage(neighbor node.NodeId, leaderId node.NodeId, electionId election_definitions.ElectionId) protocol.Message {
 	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
 		election_definitions.Leader,
-		n.electionCtx.GetId(),
+		electionId,
 		[]string{fmt.Sprintf("%d", leaderId)},
 		n.electionCtx.CurrentRound(),
 	)
 }
 
-func (n *ClusterNode) endElection(role node.NodeRole, leaderId node.NodeId) {
+func (n *ClusterNode) endElection(role node.NodeRole, leaderId node.NodeId, electionId election_definitions.ElectionId) {
+	newContext := election.NewPostElectionContext(role, leaderId, electionId)
+
 	n.electionCtx.Clear()
 	n.electionCtx.SetLeaderReceived()
-	n.postElectionCtx = election.NewPostElectionContext(role, leaderId, n.electionCtx.GetId())
+	n.postElectionCtx.Store(newContext)
 }
 
 func (n *ClusterNode) timestampMessage(message protocol.Message) {
@@ -966,7 +1202,7 @@ func (n *ClusterNode) timestampMessage(message protocol.Message) {
 func (n *ClusterNode) destroy() {
 	n.config = nil
 	n.electionCtx = nil
-	n.postElectionCtx = nil
+	n.postElectionCtx.Store(nil)
 	n.treeMan = nil
 	n.topologyMan.Destroy()
 	n.cancel()
@@ -998,7 +1234,7 @@ func (n *ClusterNode) AddNeighbor(id node.NodeId, address string) error {
 	err := n.topologyMan.Add(id, address)
 	go func() {
 		time.Sleep(3 * time.Second)
-		n.SendElectionMessage(id, n.newJoinMessage(id))
+		n.SendJoinMessage(id)
 	}()
 	return err
 }
@@ -1056,8 +1292,7 @@ func (n *ClusterNode) sendToNeighbor(id node.NodeId, message protocol.Message) e
 	if err != nil {
 		return err
 	}
-	n.topologyMan.SendTo(id, payload)
-	return nil
+	return n.topologyMan.SendTo(id, payload)
 }
 
 // Retrieves a message from the topology.
@@ -1080,8 +1315,8 @@ func (n *ClusterNode) recv() (id node.NodeId, msg protocol.Message, err error) {
 	n.updateClock(header.TimeStamp)
 
 	switch header.Type {
-	case protocol.Join:
-		msg = &protocol.JoinMessage{}
+	case protocol.Topology:
+		msg = &protocol.TopologyMessage{}
 
 	case protocol.Election:
 		msg = &election_definitions.ElectionMessage{}

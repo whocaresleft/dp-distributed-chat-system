@@ -11,6 +11,11 @@ import (
 
 const Timeout = time.Second * 30
 
+type ElectionVerdict struct {
+	LeaderId   node.NodeId
+	ElectionId ElectionId
+}
+
 type LinkDirection bool
 type ElectionId string
 

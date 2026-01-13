@@ -14,6 +14,8 @@ import (
 	"server/cluster/node"
 )
 
+const toleratedTimeouts = 10
+
 type roundContext struct {
 	epoch uint
 
@@ -89,6 +91,8 @@ type ElectionContext struct {
 	futureRounds     map[uint]*futureRoundContext
 	linksOrientation map[node.NodeId]election_definitions.LinkDirection
 	orientationCount map[election_definitions.LinkDirection]uint
+
+	timeoutsCount map[node.NodeId]uint16
 }
 
 func NewElectionContext(discriminant node.NodeId) *ElectionContext {
@@ -107,6 +111,7 @@ func NewElectionContext(discriminant node.NodeId) *ElectionContext {
 		make(map[uint]*futureRoundContext),
 		make(map[node.NodeId]election_definitions.LinkDirection),
 		orientationCount,
+		make(map[node.NodeId]uint16),
 	}
 }
 
@@ -140,6 +145,7 @@ func (e *ElectionContext) Clear() {
 	e.orientationCount[election_definitions.Incoming] = 0
 	e.orientationCount[election_definitions.Outgoing] = 0
 	clear(e.linksOrientation)
+	clear(e.timeoutsCount)
 }
 
 func (e *ElectionContext) Reset(clock uint64) {
@@ -201,6 +207,23 @@ func (e *ElectionContext) NextRound() {
 	delete(e.futureRounds, nextRound)
 }
 
+func (e *ElectionContext) NoMoreFaulty(node node.NodeId) error {
+	_, ok := e.timeoutsCount[node]
+	if !ok {
+		return fmt.Errorf("Node %d was not registered", node)
+	}
+	e.timeoutsCount[node] = 0
+	return nil
+}
+
+func (e *ElectionContext) IsFaulty(node node.NodeId) (bool, error) {
+	timeouts, err := e.GetTimeout(node)
+	if err != nil {
+		return false, err
+	}
+	return timeouts >= toleratedTimeouts, nil
+}
+
 func (e *ElectionContext) HasReceivedStart() bool {
 	return e.receivedStart
 }
@@ -232,6 +255,7 @@ func (e *ElectionContext) Add(id node.NodeId, orientation election_definitions.L
 	}
 	e.linksOrientation[id] = orientation
 	e.orientationCount[orientation]++
+	e.timeoutsCount[id] = 0
 	return nil
 }
 
@@ -241,6 +265,7 @@ func (e *ElectionContext) Remove(id node.NodeId) error {
 	}
 	orientation := e.linksOrientation[id]
 	delete(e.linksOrientation, id)
+	delete(e.timeoutsCount, id)
 	e.orientationCount[orientation]--
 	return nil
 }
@@ -261,6 +286,21 @@ func (e *ElectionContext) GetOrientation(id node.NodeId) (election_definitions.L
 		return false, fmt.Errorf("Node %d is not present, you can add it with .Add()", id)
 	}
 	return e.linksOrientation[id], nil
+}
+
+func (e *ElectionContext) IncreaseTimeout(id node.NodeId) error {
+	if !e.Exists(id) {
+		return fmt.Errorf("Node %d is not present, you can add it with .Add() first", id)
+	}
+	e.timeoutsCount[id]++
+	return nil
+}
+
+func (e *ElectionContext) GetTimeout(id node.NodeId) (uint16, error) {
+	if !e.Exists(id) {
+		return 0, fmt.Errorf("Node %d is not present, you can add it with .Add() first", id)
+	}
+	return e.timeoutsCount[id], nil
 }
 
 func (e *ElectionContext) UpdateStatus() {

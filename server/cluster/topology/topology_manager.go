@@ -27,6 +27,10 @@ type TopologyManager struct {
 	neighborsLastSeen map[node.NodeId]time.Time
 	connectionManager *connection.ConnectionManager // Handles the connections between this node and the neighbors
 
+	randomHeartbeats map[node.NodeId]uint8
+	AckJoinPending   map[node.NodeId]string
+	AckPending       map[node.NodeId]string
+
 	neighborMutex sync.RWMutex
 }
 
@@ -62,6 +66,9 @@ func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
 		make(map[node.NodeId]string),
 		make(map[node.NodeId]time.Time),
 		connMan,
+		make(map[node.NodeId]uint8),
+		make(map[node.NodeId]string),
+		make(map[node.NodeId]string),
 		sync.RWMutex{},
 	}
 
@@ -86,8 +93,110 @@ func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
 		return err
 	}
 
-	t.LogicalAdd(neighbor, address)
+	t.neighborMutex.Lock()
+	t.AckJoinPending[neighbor] = address
+	t.neighborMutex.Unlock()
 	return nil
+}
+
+func (t *TopologyManager) IncreaseRandomHeartbeat(nonNeighbor node.NodeId) (uint8, error) {
+	t.neighborMutex.RLock()
+
+	if _, ok := t.neighbors[nonNeighbor]; ok {
+		return 0, fmt.Errorf("%d is a neighbor, the heartbeat is justified", nonNeighbor)
+	}
+	t.neighborMutex.RUnlock()
+
+	if _, ok := t.randomHeartbeats[nonNeighbor]; !ok {
+		t.randomHeartbeats[nonNeighbor] = 0
+	}
+	t.randomHeartbeats[nonNeighbor]++
+	return t.randomHeartbeats[nonNeighbor], nil
+}
+
+func (t *TopologyManager) ResetRandomHeartbeats(nonNeighbor node.NodeId) error {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	if _, ok := t.neighbors[nonNeighbor]; ok {
+		return fmt.Errorf("%d is a neighbor, the heartbeats are normal", nonNeighbor)
+	}
+	t.randomHeartbeats[nonNeighbor] = 0
+	return nil
+}
+
+func (t *TopologyManager) GetRandomHeartbeatNumber(nonNeighbor node.NodeId) (uint8, error) {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	if _, ok := t.neighbors[nonNeighbor]; ok {
+		return 0, fmt.Errorf("%d is a neighbor, the heartbeats are normal", nonNeighbor)
+	}
+	h, ok := t.randomHeartbeats[nonNeighbor]
+	if !ok {
+		return 0, fmt.Errorf("%d has not send any random heartbeat", nonNeighbor)
+	}
+	return h, nil
+}
+
+func (t *TopologyManager) SetReAckJoinPending(oldNeighbor node.NodeId) {
+	t.AckJoinPending[oldNeighbor] = t.neighbors[oldNeighbor]
+}
+
+func (t *TopologyManager) SetReAckPending(oldNeighbor node.NodeId) {
+	t.AckPending[oldNeighbor] = t.neighbors[oldNeighbor]
+}
+
+func (t *TopologyManager) SetAckPending(neighbor node.NodeId, address string) {
+	t.AckPending[neighbor] = address
+}
+
+func (t *TopologyManager) MarkAck(neighbor node.NodeId) {
+
+	t.neighborMutex.Lock()
+	addr, ok := t.AckPending[neighbor]
+	if !ok {
+		return
+	}
+	delete(t.AckPending, neighbor)
+	t.neighborMutex.Unlock()
+
+	t.LogicalAdd(neighbor, addr)
+}
+func (t *TopologyManager) MarkReAck(neighbor node.NodeId) {
+
+	_, ok := t.AckPending[neighbor]
+	if !ok {
+		return
+	}
+	delete(t.AckPending, neighbor)
+
+	t.UpdateLastSeen(neighbor, time.Now())
+}
+
+func (t *TopologyManager) MarkAckJoin(neighbor node.NodeId) {
+
+	addr, ok := t.AckJoinPending[neighbor]
+	if !ok {
+		return
+	}
+	delete(t.AckJoinPending, neighbor)
+	fmt.Printf("SET %d AS NEIGHBOR FOR REAL", neighbor)
+
+	t.LogicalAdd(neighbor, addr)
+}
+
+func (t *TopologyManager) MarkReAckJoin(neighbor node.NodeId, address string) {
+
+	_, ok := t.AckJoinPending[neighbor]
+	if !ok {
+		return
+	}
+	delete(t.AckJoinPending, neighbor)
+	fmt.Printf("SET %d AS NEIGHBOR FOR REAL", neighbor)
+
+	t.LogicalAdd(neighbor, address)
+	t.UpdateLastSeen(neighbor, time.Now())
 }
 
 func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address string) {
@@ -246,8 +355,15 @@ func (t *TopologyManager) NeighborList() []node.NodeId {
 	return list
 }
 
+func (t *TopologyManager) isPending(neighbor node.NodeId) bool {
+	_, aj := t.AckJoinPending[neighbor]
+	_, a := t.AckPending[neighbor]
+	_, ok := t.randomHeartbeats[neighbor]
+	return aj || a || ok
+}
+
 func (t *TopologyManager) SendTo(neighbor node.NodeId, payload []byte) error {
-	if !t.Exists(neighbor) {
+	if !(t.Exists(neighbor) || t.isPending(neighbor)) { // If it's neither a neighbor, nor a pending neighbor
 		return fmt.Errorf("Node %d is not a neighbor", neighbor)
 	}
 	return t.connectionManager.SendTo(connection.Identifier(neighbor), payload)
