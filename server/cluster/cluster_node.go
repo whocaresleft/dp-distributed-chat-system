@@ -66,6 +66,7 @@ type ClusterNode struct {
 
 	topologyInbox chan *protocol.TopologyMessage
 	electionInbox chan *election_definitions.ElectionMessage
+	treeInbox     chan *protocol.TreeMessage
 	outputChannel chan outMessage
 
 	logger *nlog.NodeLogger
@@ -103,6 +104,7 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 
 	electionInbox := make(chan *election_definitions.ElectionMessage, 500)
 	joinInbox := make(chan *protocol.TopologyMessage, 500)
+	treeInbox := make(chan *protocol.TreeMessage, 500)
 	outChan := make(chan outMessage, 500)
 
 	logger.Logf("main", "Created context")
@@ -120,6 +122,7 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 		topology.NewTreeManager(),
 		joinInbox,
 		electionInbox,
+		treeInbox,
 		outChan,
 		logger,
 	}, nil
@@ -270,6 +273,10 @@ func (n *ClusterNode) RunInputDispatcher() {
 			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
 				n.electionInbox <- m
 			}
+		case protocol.SpanningTree:
+			if m, ok := msg.(*protocol.TreeMessage); ok {
+				n.treeInbox <- m
+			}
 
 		case protocol.Heartbeat:
 			if !n.IsNeighborsWith(id) {
@@ -405,6 +412,30 @@ func (n *ClusterNode) HeartbeatHandle() {
 		case <-ticker.C:
 			for _, neighbor := range n.neighborList() {
 				n.SendHeartbeat(neighbor)
+			}
+		}
+	}
+}
+
+func (n *ClusterNode) TreeHandle() {
+	n.logf("tree", "Started tree handle")
+	defer n.logf("tree", "FATAL: Tree handle has failed...")
+
+	for {
+		n.logf("tree", "Awaiting tree message...")
+		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Tree: Stop signal received")
+			n.logf("tree", "Stop signal received")
+			return
+		case message := <-n.treeInbox:
+			n.logf("tree", "Tree message received: %s", message.String())
+
+			switch n.treeMan.GetState() {
+			case protocol.Initiator:
+			case protocol.Idle:
+			case protocol.Active:
+			case protocol.Done:
 			}
 		}
 	}
@@ -1018,6 +1049,10 @@ func (n *ClusterNode) enterYoDown() {
 		}
 		n.endElection(node.Leader, n.getId(), electionId)
 		n.switchToElectionState(election_definitions.Idle)
+		go func() {
+			time.Sleep(10 * time.Second)
+			n.startShout()
+		}()
 	case election_definitions.Loser:
 		n.logf("election", "I lost the election")
 		n.switchToElectionState(election_definitions.Idle)

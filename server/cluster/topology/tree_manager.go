@@ -11,17 +11,27 @@ package topology
 import (
 	"fmt"
 	"server/cluster/node"
+	"server/cluster/node/protocol"
 )
 
 // A Tree Manager is a component of a node that handles the links between nodes inside the Shortest Path Tree created after the leader's election.
 type TreeManager struct {
+	state    protocol.TreeState
 	parent   *node.NodeId // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
 	children map[node.NodeId]struct{}
 }
 
 // Creates a tree manager with the given parent and an empty map for children.
 func NewTreeManager() *TreeManager {
-	return &TreeManager{nil, make(map[node.NodeId]struct{})}
+	return &TreeManager{protocol.Idle, nil, make(map[node.NodeId]struct{})}
+}
+
+func (t *TreeManager) GetState() protocol.TreeState {
+	return t.state
+}
+
+func (t *TreeManager) SwitchToState(state protocol.TreeState) {
+	t.state = state
 }
 
 // Adds a child if it wasn't already present

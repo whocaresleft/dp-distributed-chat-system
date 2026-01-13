@@ -8,12 +8,14 @@ const (
 	Topology MessageType = iota
 	Election
 	Heartbeat
+	SpanningTree
 )
 
 var readableType = []string{
 	"Topology",
 	"Election",
 	"Heartbeat",
+	"Spanning Tree",
 }
 
 func (t MessageType) String() string {
@@ -75,4 +77,36 @@ func (j *TopologyMessage) SetHeader(h *MessageHeader) {
 }
 func (j *TopologyMessage) String() string {
 	return fmt.Sprintf("Header{%s}, Address{%s}, Flags{%v}", j.Header.String(), j.Address, j.Flags)
+}
+
+type TreeState uint8
+
+const (
+	Initiator TreeState = iota
+	Idle
+	Active
+	Done
+)
+
+type TreeMessage struct {
+	Header   MessageHeader `json:"header"`
+	Question bool          `json:"question"`
+	Answer   bool          `json:"answer"`
+}
+
+func NewTreeMessage(h *MessageHeader, question, answer bool) *TreeMessage {
+	return &TreeMessage{
+		Header:   *h,
+		Question: question,
+		Answer:   answer,
+	}
+}
+func (t *TreeMessage) GetHeader() *MessageHeader {
+	return &t.Header
+}
+func (t *TreeMessage) SetHeader(h *MessageHeader) {
+	t.Header = *h
+}
+func (t *TreeMessage) String() string {
+	return fmt.Sprintf("Header{%s}, Question{%v}, Answer{%v}", t.Header.String(), t.Question, t.Answer)
 }
