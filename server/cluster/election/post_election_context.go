@@ -14,7 +14,8 @@ import (
 	"server/cluster/node"
 )
 
-const acceptableTimeouts = uint16(5)
+const RejoinLeaderTimeout = uint8(5)
+const StartoverLeaderTimeout = uint8(10)
 
 // A Post election context contains the node's information after the last election process.
 // This is a stable election context, valid until a new election process is performed.
@@ -24,7 +25,7 @@ type PostElectionContext struct {
 	role           node.NodeRole // Role of the node, specifies what are the responsibilities of a particular node in the system.
 	leaderId       node.NodeId   // Id of the leader node.
 	electionId     election_definitions.ElectionId
-	leaderTimeout  uint16
+	leaderTimeout  uint8
 	persistenceIds map[node.NodeId]node.NodeId // Map of the persistence nodes. Maps each persistence node ID (leader included) to the ID of the next hop, that is, the neighboring node to follow to reach the destination.
 }
 
@@ -33,17 +34,17 @@ func NewPostElectionContext(role node.NodeRole, leader node.NodeId, electionId e
 	return &PostElectionContext{role, leader, electionId, 0, make(map[node.NodeId]node.NodeId)}
 }
 
-func (p *PostElectionContext) IncreaseLeaderTimeouts() uint16 {
+func (p *PostElectionContext) IncreaseLeaderTimeouts() uint8 {
 	p.leaderTimeout++
 	return p.GetLeaderTimeouts()
 }
 
-func (p *PostElectionContext) GetLeaderTimeouts() uint16 {
+func (p *PostElectionContext) GetLeaderTimeouts() uint8 {
 	return p.leaderTimeout
 }
 
-func (p *PostElectionContext) IsLeaderTimeoutAcceptable() bool {
-	return p.GetLeaderTimeouts() < acceptableTimeouts
+func (p *PostElectionContext) ResetLeaderTimeouts() {
+	p.leaderTimeout = 0
 }
 
 // Adds a pair (persistence node id, next hop node) to the node, if the persistence node id doesn't already have a next hop associated.

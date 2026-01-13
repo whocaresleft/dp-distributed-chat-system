@@ -1,0 +1,17 @@
+syntax = "proto3";
+package bootstrap;
+option go_package = "./protocol";
+
+service BootstrapService {
+    rpc Register(RegisterRequest) returns (RegisterResponse) {}
+}
+message RegisterRequest {
+    uint64 id = 1;
+    string address = 2;
+    uint32 port = 3;
+}
+
+message RegisterResponse {
+    bool success = 1;
+    map<uint64, string> neighbors = 2;
+}

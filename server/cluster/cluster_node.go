@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	bootstrap_protocol "server/cluster/bootstrap/protocol"
 	"server/cluster/election"
 	election_definitions "server/cluster/election/definitions"
 	"server/cluster/nlog"
@@ -23,6 +24,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type outMessage struct {
@@ -101,14 +105,12 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 	joinInbox := make(chan *protocol.TopologyMessage, 500)
 	outChan := make(chan outMessage, 500)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
 	logger.Logf("main", "Created context")
 	logger.Logf("main", "Node is all set")
 
 	return &ClusterNode{
-		ctx,
-		cancel,
+		nil,
+		nil,
 		0,
 		sync.Mutex{},
 		config,
@@ -121,6 +123,25 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 		outChan,
 		logger,
 	}, nil
+}
+
+func (n *ClusterNode) WithDefaultContext() *ClusterNode {
+	ctx := context.Background()
+	ctx, can := context.WithCancel(ctx)
+	n.ctx = ctx
+	n.cancel = can
+	return n
+}
+
+func (n *ClusterNode) SetContextDefaultCancel(ctx context.Context) {
+	ctx, can := context.WithCancel(ctx)
+	n.ctx = ctx
+	n.cancel = can
+}
+
+func (n *ClusterNode) SetContextCancelFunc(ctx context.Context, cancel context.CancelFunc) {
+	n.ctx = ctx
+	n.cancel = cancel
 }
 
 func (n *ClusterNode) EnableLogging() {
@@ -160,15 +181,31 @@ func (n *ClusterNode) updateClock(received uint64) {
 // This is supposed to be run as a goroutine.
 // It waits for incoming messages and dispatches them to the correct input channel.
 // If no channel meets the criteria, the message is dropped.
-func (n *ClusterNode) RunInputDispatcher() {
+func (n *ClusterNode) RunInputDispatcherNonMiConvince() {
 
 	n.logf("main", "Started input dispatcher. Awaiting messages...")
 	defer n.logf("main", "FATAL: Input dispatcher has failed...")
 
 	for {
+		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Stop signal received")
+			return
+		default:
+		}
+
+		ready, err := n.poll()
+		if err != nil {
+			n.logf("main", "Error: %v", err)
+			continue
+		}
+
+		if !ready {
+			continue
+		}
+
 		id, msg, err := n.recv()
 		if err != nil {
-			// Skip message
 			n.logf("main", "Message received on dispatcher with an error: %v", err)
 			continue
 		}
@@ -205,6 +242,54 @@ func (n *ClusterNode) RunInputDispatcher() {
 	}
 }
 
+func (n *ClusterNode) RunInputDispatcher() {
+
+	n.logf("main", "Started input dispatcher. Awaiting messages...")
+	defer n.logf("main", "FATAL: Input dispatcher has failed...")
+
+	for {
+		id, msg, err := n.recv()
+		if err != nil {
+			n.logf("main", "Message received on dispatcher with an error: %v", err)
+			continue
+		}
+
+		header := msg.GetHeader()
+		n.logf("main", "Message received on dispatcher: %d, %v", id, header.String())
+
+		n.markAlive(id)
+		n.logf("heartbeat", "Message used as keepalive for %d, MARKING 3 ALIVE: %d", id, n.isAlive(3))
+
+		switch header.Type {
+		case protocol.Topology:
+			if m, ok := msg.(*protocol.TopologyMessage); ok {
+				n.topologyInbox <- m
+			}
+
+		case protocol.Election:
+			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
+				n.electionInbox <- m
+			}
+
+		case protocol.Heartbeat:
+			if !n.IsNeighborsWith(id) {
+				n.logf("heartbeat", "I don't know %d, but he keeps sending heartbeats")
+				heartbeats, _ := n.topologyMan.IncreaseRandomHeartbeat(id)
+				if heartbeats >= 5 {
+					n.logf("heartbeat", "%d is persistent... Maybe it's an old neighbor, trying to REJOIN", id)
+					n.topologyMan.ResetRandomHeartbeats(id)
+					n.topologyMan.SetReAckJoinPending(id)
+					n.SendReJoinMessage(id)
+				}
+			}
+		}
+	}
+}
+
+func isRecvNotReadyError(err error) bool {
+	return topology.IsRecvNotReadyError(err)
+}
+
 // This function is supposed to be run as a goroutine.
 // It waits on an output channel for messages, and each time one is received, it sends it to the destination neighbor.
 func (n *ClusterNode) RunOutputDispatcher() {
@@ -225,16 +310,6 @@ func (n *ClusterNode) RunOutputDispatcher() {
 		case <-n.ctx.Done():
 		}
 	}
-}
-
-func (n *ClusterNode) RecvTopologyMessage() *protocol.TopologyMessage {
-	return <-n.topologyInbox
-}
-
-// Retrieves an election message, that is, reading from the input channel designated for election messages.
-// It returns a pointer to the message
-func (n *ClusterNode) RecvElectionMessage() *election_definitions.ElectionMessage {
-	return <-n.electionInbox
 }
 
 // It sends an election message to the given node (based on ID). It sends the message onto the output channel.
@@ -274,7 +349,7 @@ func (n *ClusterNode) SendAckMessagge(neighbor node.NodeId) {
 
 func (n *ClusterNode) SendReJoinMessage(neighbor node.NodeId) {
 	header := n.NewMessageHeader(neighbor, protocol.Topology)
-	address := "" // The other node should already know it
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
 
 	n.outputChannel <- outMessage{
 		neighbor,
@@ -293,7 +368,7 @@ func (n *ClusterNode) SendReJoinAckMessage(neighbor node.NodeId) {
 
 func (n *ClusterNode) SendReAckMessagge(neighbor node.NodeId) {
 	header := n.NewMessageHeader(neighbor, protocol.Topology)
-	address := ""
+	address := fmt.Sprintf("%s:%d", getOutboundIP(), n.getPort())
 	n.outputChannel <- outMessage{
 		neighbor,
 		protocol.NewTopologyMessage(header, address, protocol.Jfags_ACK|protocol.Jflags_REJOIN),
@@ -319,9 +394,18 @@ func (n *ClusterNode) HeartbeatHandle() {
 	defer n.logf("heartbeat", "FATAL: Heartbeat handle has failed...")
 
 	ticker := time.NewTicker(5 * time.Second)
-	for range ticker.C {
-		for _, neighbor := range n.neighborList() {
-			n.SendHeartbeat(neighbor)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Heartbeat: Stop signal received")
+			n.logf("heartbeat", "Stop signal received")
+			return
+		case <-ticker.C:
+			for _, neighbor := range n.neighborList() {
+				n.SendHeartbeat(neighbor)
+			}
 		}
 	}
 }
@@ -329,31 +413,28 @@ func (n *ClusterNode) HeartbeatHandle() {
 func (n *ClusterNode) JoinHandle() {
 	n.logf("join", "Started join handle")
 	defer n.logf("join", "FATAL: Join handle has failed...")
+
 	for {
-
 		n.logf("join", "Awaiting join message...")
-		message := n.RecvTopologyMessage()
-		n.logf("join", "Join message received: %s", message.String())
+		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Join: Stop signal received")
+			n.logf("join", "Stop signal received")
+			return
+		case message := <-n.topologyInbox:
 
-		rejoin := message.Flags&protocol.Jflags_REJOIN > 0
+			n.logf("join", "Join message received: %s", message.String())
 
-		if rejoin {
-			n.handleRejoin(message)
-		} else {
-			n.handleFirstTimeJoin(message)
+			rejoin := message.Flags&protocol.Jflags_REJOIN > 0
+
+			if rejoin {
+				n.handleRejoin(message)
+			} else {
+				n.handleFirstTimeJoin(message)
+			}
 		}
-
-		//proceed, err := n.handleEnteringNeighbor(message)
-		//if err != nil {
-		//	n.logf("join", "False positive, the message was mal-formatted, ignoring it.")
-		//	continue
-		//}
-
-		//if proceed {
-		//	n.logf("join", "We need to start a new election ASAP")
-		//	n.startElection()
-		//}
 	}
+
 }
 
 // Sender -> JOIN -> Destination
@@ -377,6 +458,7 @@ func (n *ClusterNode) handleFirstTimeJoin(msg *protocol.TopologyMessage) error {
 			n.topologyMan.MarkAckJoin(sourceId)
 			n.markAlive(sourceId)
 			n.SendAckMessagge(sourceId)
+
 			return nil
 		}
 
@@ -459,6 +541,47 @@ func (n *ClusterNode) handleRejoin(msg *protocol.TopologyMessage) error {
 			return nil
 		}
 		return nil
+	}
+	return nil
+}
+
+func (n *ClusterNode) Start() {
+	n.logf("main", "Node booting up...")
+
+	go n.RunInputDispatcher()
+	go n.RunOutputDispatcher()
+	go n.JoinHandle()
+	go n.ElectionHandle()
+	go n.HeartbeatHandle()
+
+	defer n.logf("main", "Node's goroutine started correctly")
+}
+
+func (n *ClusterNode) BootstrapDiscovery(bootstrapAddr string) error {
+	conn, err := grpc.NewClient(bootstrapAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := bootstrap_protocol.NewBootstrapServiceClient(conn)
+
+	ctx, cancel := context.WithTimeout(n.ctx, 5*time.Second)
+	defer cancel()
+
+	res, err := client.Register(ctx, &bootstrap_protocol.RegisterRequest{
+		Id:      uint64(n.getId()),
+		Address: getOutboundIP(),
+		Port:    uint32(n.getPort()),
+	})
+	if err != nil {
+		return err
+	}
+	if res.Success {
+		n.logf("main", "Neighbors recovered: %v", res.Neighbors)
+		for id, addr := range res.Neighbors {
+			n.AddNeighbor(node.NodeId(id), addr)
+		}
 	}
 	return nil
 }
@@ -587,11 +710,19 @@ func (n *ClusterNode) handleIdleTimeout() {
 		n.logf("heartbeat", "Am i neighbors with %d? %v", leaderId, n.IsNeighborsWith(leaderId))
 		if n.IsNeighborsWith(leaderId) && !n.isAlive(leaderId) {
 
-			postCtx.IncreaseLeaderTimeouts()
-			if postCtx.IsLeaderTimeoutAcceptable() {
-				n.logf("election", "Leader has not responded for %d time now")
-			} else {
+			leaderTimeouts := postCtx.IncreaseLeaderTimeouts()
+			switch {
+			case leaderTimeouts < election.RejoinLeaderTimeout:
+				n.logf("election", "Leader has not responded for %d time now. %d more and i try to ReJoin", leaderTimeouts, election.RejoinLeaderTimeout-leaderTimeouts)
+			case leaderTimeouts == election.RejoinLeaderTimeout:
+				n.logf("election", "Leader shutoff? Probably forgot about me. Try probing with REJOIN")
+				n.SendReJoinMessage(leaderId)
+			case leaderTimeouts > election.RejoinLeaderTimeout && leaderTimeouts < election.StartoverLeaderTimeout:
+				n.logf("election", "Rejoin didn't work. In %d we start over...", election.StartoverLeaderTimeout-leaderTimeouts)
+			default:
 				n.logf("election", "Leader is considered OFF. New election MUST start")
+				postCtx.ResetLeaderTimeouts()
+				n.postElectionCtx.Store(postCtx)
 				n.startElection()
 			}
 		}
@@ -1205,7 +1336,6 @@ func (n *ClusterNode) destroy() {
 	n.postElectionCtx.Store(nil)
 	n.treeMan = nil
 	n.topologyMan.Destroy()
-	n.cancel()
 }
 
 //============================================================================//
@@ -1293,6 +1423,10 @@ func (n *ClusterNode) sendToNeighbor(id node.NodeId, message protocol.Message) e
 		return err
 	}
 	return n.topologyMan.SendTo(id, payload)
+}
+
+func (n *ClusterNode) poll() (bool, error) {
+	return n.topologyMan.Poll()
 }
 
 // Retrieves a message from the topology.

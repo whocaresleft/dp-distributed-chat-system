@@ -138,7 +138,9 @@ func (t *TopologyManager) GetRandomHeartbeatNumber(nonNeighbor node.NodeId) (uin
 	}
 	return h, nil
 }
-
+func (t *TopologyManager) RemoveReAckJoinPending(oldNeighbor node.NodeId) {
+	delete(t.AckJoinPending, oldNeighbor)
+}
 func (t *TopologyManager) SetReAckJoinPending(oldNeighbor node.NodeId) {
 	t.AckJoinPending[oldNeighbor] = t.neighbors[oldNeighbor]
 }
@@ -383,4 +385,12 @@ func (t *TopologyManager) Recv() (sender node.NodeId, contents [][]byte, err err
 
 func (t *TopologyManager) Destroy() {
 	t.connectionManager.Destroy()
+}
+
+func IsRecvNotReadyError(err error) bool {
+	return err.Error() == connection.RecvNotReady
+}
+
+func (t *TopologyManager) Poll() (bool, error) {
+	return t.connectionManager.Poll()
 }
