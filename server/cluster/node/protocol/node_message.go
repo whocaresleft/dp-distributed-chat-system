@@ -1,6 +1,8 @@
 package protocol
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type MessageType uint8
 
@@ -8,14 +10,12 @@ const (
 	Topology MessageType = iota
 	Election
 	Heartbeat
-	SpanningTree
 )
 
 var readableType = []string{
 	"Topology",
 	"Election",
 	"Heartbeat",
-	"Spanning Tree",
 }
 
 func (t MessageType) String() string {

@@ -9,6 +9,7 @@
 package topology
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"server/cluster/connection"
@@ -388,9 +389,9 @@ func (t *TopologyManager) Destroy() {
 }
 
 func IsRecvNotReadyError(err error) bool {
-	return err.Error() == connection.RecvNotReady
+	return errors.Is(err, connection.ErrRecvNotReady)
 }
 
-func (t *TopologyManager) Poll() (bool, error) {
-	return t.connectionManager.Poll()
+func (t *TopologyManager) Poll(timeout time.Duration) error {
+	return t.connectionManager.Poll(timeout)
 }

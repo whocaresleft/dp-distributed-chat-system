@@ -20,6 +20,7 @@ import (
 	"server/cluster/node"
 	"server/cluster/node/protocol"
 	"server/cluster/topology"
+	spanningtree "server/cluster/topology/spanning_tree"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -47,6 +48,9 @@ func registerLogfiles(n *nlog.NodeLogger) error {
 	if err := n.AddLogger("heartbeat"); err != nil {
 		return err
 	}
+	if err := n.AddLogger("tree"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -62,11 +66,11 @@ type ClusterNode struct {
 	topologyMan     *topology.TopologyManager
 	electionCtx     *election.ElectionContext
 	postElectionCtx atomic.Pointer[election.PostElectionContext]
-	treeMan         *topology.TreeManager
+	treeBuilder     *spanningtree.TreeConstructor
+	treeMan         *spanningtree.TreeManager
 
 	topologyInbox chan *protocol.TopologyMessage
 	electionInbox chan *election_definitions.ElectionMessage
-	treeInbox     chan *protocol.TreeMessage
 	outputChannel chan outMessage
 
 	logger *nlog.NodeLogger
@@ -104,7 +108,6 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 
 	electionInbox := make(chan *election_definitions.ElectionMessage, 500)
 	joinInbox := make(chan *protocol.TopologyMessage, 500)
-	treeInbox := make(chan *protocol.TreeMessage, 500)
 	outChan := make(chan outMessage, 500)
 
 	logger.Logf("main", "Created context")
@@ -119,10 +122,10 @@ func NewClusterNode(id node.NodeId, port uint16, logging bool) (*ClusterNode, er
 		tp,
 		election.NewElectionContext(config.GetId()),
 		atomic.Pointer[election.PostElectionContext]{},
-		topology.NewTreeManager(),
+		spanningtree.NewTreeConstructor(),
+		spanningtree.NewTreeManager(),
 		joinInbox,
 		electionInbox,
-		treeInbox,
 		outChan,
 		logger,
 	}, nil
@@ -184,7 +187,7 @@ func (n *ClusterNode) updateClock(received uint64) {
 // This is supposed to be run as a goroutine.
 // It waits for incoming messages and dispatches them to the correct input channel.
 // If no channel meets the criteria, the message is dropped.
-func (n *ClusterNode) RunInputDispatcherNonMiConvince() {
+func (n *ClusterNode) RunInputDispatcher() {
 
 	n.logf("main", "Started input dispatcher. Awaiting messages...")
 	defer n.logf("main", "FATAL: Input dispatcher has failed...")
@@ -192,23 +195,26 @@ func (n *ClusterNode) RunInputDispatcherNonMiConvince() {
 	for {
 		select {
 		case <-n.ctx.Done():
-			n.logf("main", "Stop signal received")
+			n.logf("main", "Input dispatcher: Stop signal received")
 			return
 		default:
 		}
 
-		ready, err := n.poll()
-		if err != nil {
-			n.logf("main", "Error: %v", err)
-			continue
-		}
-
-		if !ready {
+		if err := n.poll(500 * time.Millisecond); err != nil {
+			if isRecvNotReadyError(err) {
+				continue
+			}
+			n.logf("main", "Polling error %v:", err)
+			time.Sleep(100 * time.Millisecond)
 			continue
 		}
 
 		id, msg, err := n.recv()
 		if err != nil {
+			if isRecvNotReadyError(err) {
+				n.logf("main", "Recv not ready: %v", err)
+				continue
+			}
 			n.logf("main", "Message received on dispatcher with an error: %v", err)
 			continue
 		}
@@ -228,54 +234,6 @@ func (n *ClusterNode) RunInputDispatcherNonMiConvince() {
 		case protocol.Election:
 			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
 				n.electionInbox <- m
-			}
-
-		case protocol.Heartbeat:
-			if !n.IsNeighborsWith(id) {
-				n.logf("heartbeat", "I don't know %d, but he keeps sending heartbeats")
-				heartbeats, _ := n.topologyMan.IncreaseRandomHeartbeat(id)
-				if heartbeats >= 5 {
-					n.logf("heartbeat", "%d is persistent... Maybe it's an old neighbor, trying to REJOIN", id)
-					n.topologyMan.ResetRandomHeartbeats(id)
-					n.topologyMan.SetReAckJoinPending(id)
-					n.SendReJoinMessage(id)
-				}
-			}
-		}
-	}
-}
-
-func (n *ClusterNode) RunInputDispatcher() {
-
-	n.logf("main", "Started input dispatcher. Awaiting messages...")
-	defer n.logf("main", "FATAL: Input dispatcher has failed...")
-
-	for {
-		id, msg, err := n.recv()
-		if err != nil {
-			n.logf("main", "Message received on dispatcher with an error: %v", err)
-			continue
-		}
-
-		header := msg.GetHeader()
-		n.logf("main", "Message received on dispatcher: %d, %v", id, header.String())
-
-		n.markAlive(id)
-		n.logf("heartbeat", "Message used as keepalive for %d, MARKING 3 ALIVE: %d", id, n.isAlive(3))
-
-		switch header.Type {
-		case protocol.Topology:
-			if m, ok := msg.(*protocol.TopologyMessage); ok {
-				n.topologyInbox <- m
-			}
-
-		case protocol.Election:
-			if m, ok := msg.(*election_definitions.ElectionMessage); ok {
-				n.electionInbox <- m
-			}
-		case protocol.SpanningTree:
-			if m, ok := msg.(*protocol.TreeMessage); ok {
-				n.treeInbox <- m
 			}
 
 		case protocol.Heartbeat:
@@ -306,6 +264,9 @@ func (n *ClusterNode) RunOutputDispatcher() {
 
 	for {
 		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Output dispatcher: Stop signal received")
+			return
 		case out := <-n.outputChannel:
 			err := n.sendToNeighbor(out.Neighbor, out.Message)
 
@@ -314,7 +275,6 @@ func (n *ClusterNode) RunOutputDispatcher() {
 			if err != nil {
 				n.logf("main", "An error occurred after sendToNeighbor(): %v", err)
 			}
-		case <-n.ctx.Done():
 		}
 	}
 }
@@ -417,30 +377,6 @@ func (n *ClusterNode) HeartbeatHandle() {
 	}
 }
 
-func (n *ClusterNode) TreeHandle() {
-	n.logf("tree", "Started tree handle")
-	defer n.logf("tree", "FATAL: Tree handle has failed...")
-
-	for {
-		n.logf("tree", "Awaiting tree message...")
-		select {
-		case <-n.ctx.Done():
-			n.logf("main", "Tree: Stop signal received")
-			n.logf("tree", "Stop signal received")
-			return
-		case message := <-n.treeInbox:
-			n.logf("tree", "Tree message received: %s", message.String())
-
-			switch n.treeMan.GetState() {
-			case protocol.Initiator:
-			case protocol.Idle:
-			case protocol.Active:
-			case protocol.Done:
-			}
-		}
-	}
-}
-
 func (n *ClusterNode) JoinHandle() {
 	n.logf("join", "Started join handle")
 	defer n.logf("join", "FATAL: Join handle has failed...")
@@ -516,6 +452,8 @@ func (n *ClusterNode) handleFirstTimeJoin(msg *protocol.TopologyMessage) error {
 		if n.getElectionState() == election_definitions.Idle && postCtx != nil {
 			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
 
+			n.logf("tree", "Since I have a new neighbor, i go back to being active to wait for its approval")
+			n.treeBuilder.SwitchToState(protocol.Active)
 			n.SendCurrentLeader(sourceId)
 			return nil
 		}
@@ -568,6 +506,8 @@ func (n *ClusterNode) handleRejoin(msg *protocol.TopologyMessage) error {
 		if n.getElectionState() == election_definitions.Idle && postCtx != nil {
 			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
 
+			n.logf("tree", "Since I have a new neighbor, i go back to being active to wait for its approval")
+			n.treeBuilder.SwitchToState(protocol.Active)
 			n.SendCurrentLeader(sourceId)
 			return nil
 		}
@@ -641,12 +581,20 @@ func (n *ClusterNode) ElectionHandle() {
 	defer n.logf("election", "FATAL: Election handle has failed...")
 
 	n.switchToElectionState(election_definitions.Idle)
+	timer := time.NewTimer(15 * time.Second)
+	defer timer.Stop()
 
 	for {
+		timer.Reset(15 * time.Second)
 		n.logf("election", "Awaiting election message...")
 		state := n.getElectionState()
 
 		select {
+		case <-n.ctx.Done():
+			n.logf("main", "Election: Stop signal received")
+			n.logf("election", "Stop signal received")
+			return
+
 		case message := <-n.electionInbox:
 
 			senderId, _ := extractConnectionIdentifier(message.GetHeader().Sender)
@@ -670,7 +618,7 @@ func (n *ClusterNode) ElectionHandle() {
 				n.handleWaitingYoUp(message)
 			}
 
-		case <-time.After(15 * time.Second):
+		case <-timer.C:
 			n.logf("election", "Timeout occurred... Current state is %v", state.String())
 
 			switch state {
@@ -1042,17 +990,8 @@ func (n *ClusterNode) enterYoDown() {
 
 	case election_definitions.Winner:
 		n.logf("election", "I won the election, sending my ID to others")
-		electionId := n.electionCtx.GetId()
-		for _, neighbor := range n.neighborList() {
-			n.SendElectionMessage(neighbor, n.newLeaderMessage(neighbor, n.getId(), electionId))
-			n.logf("election", "Sent leader message to %d", neighbor)
-		}
-		n.endElection(node.Leader, n.getId(), electionId)
+		n.startShout()
 		n.switchToElectionState(election_definitions.Idle)
-		go func() {
-			time.Sleep(10 * time.Second)
-			n.startShout()
-		}()
 	case election_definitions.Loser:
 		n.logf("election", "I lost the election")
 		n.switchToElectionState(election_definitions.Idle)
@@ -1143,6 +1082,8 @@ func (n *ClusterNode) ElectionSetupWithID(id election_definitions.ElectionId) {
 	n.electionCtx.Reset(n.incrementClock())
 	n.setElectionId(id)
 
+	n.treeBuilder.Reset() // After this election we need to build a new spanning tree
+
 	// We can skip the ID exchange thanks to the topology creation
 
 	n.logf("election", "Orienting the nodes with current neighbors")
@@ -1168,37 +1109,9 @@ func (n *ClusterNode) ElectionSetupWithID(id election_definitions.ElectionId) {
 	n.electionCtx.FirstRound()
 }
 
-func (n *ClusterNode) handleEnteringNeighbor(msg *protocol.TopologyMessage) (proceed bool, err error) {
-	sourceId, err := extractConnectionIdentifier(msg.GetHeader().Sender)
-	if err != nil {
-		// Mal-formatted, skiphandleEnteringN
-		return false, err
-	}
-	n.acknowledgeNeighborExistence(sourceId, msg.Address)
-
-	wasAlive := n.isAlive(sourceId)
-	n.markAlive(sourceId)
-	faulty, _ := n.electionCtx.IsFaulty(sourceId)
-	if !wasAlive || faulty {
-		n.logf("join", "Node %d is ON: %v", sourceId, n.isAlive(sourceId))
-		n.electionCtx.NoMoreFaulty(sourceId)
-
-		// is there a current election?
-		postCtx := n.postElectionCtx.Load()
-		if n.getElectionState() == election_definitions.Idle && postCtx != nil { // No we are not dealing with an election, and one was already done at least
-			n.logf("election", "Sending %d information about last election: %v", sourceId, n.postElectionCtx.Load())
-
-			n.SendCurrentLeader(sourceId)
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
 func (n *ClusterNode) SendCurrentLeader(neighbor node.NodeId) {
 	postCtx := n.postElectionCtx.Load()
-	electionMsg := n.newLeaderMessage(neighbor, postCtx.GetLeader(), postCtx.GetElectionId()).(*election_definitions.ElectionMessage)
+	electionMsg := n.newLeaderAnnouncement(neighbor, postCtx.GetLeader(), postCtx.GetElectionId()).(*election_definitions.ElectionMessage)
 	if electionMsg.ElectionId == election_definitions.InvalidId {
 		log.Fatal("The electionId in post election context is invalid")
 	}
@@ -1273,6 +1186,33 @@ func (n *ClusterNode) handleLeaderMessage(message *election_definitions.Election
 		n.logf("election", "Received a leader message, by %d, for an older election (mine: %s, received: %s) Ignoring.", sender, currentId, receivedId)
 		return nil
 	case cmp == 0:
+		if n.treeBuilder.GetState() == protocol.Active {
+			isAnswer := len(message.Body) > 1 // If it's 1 then its an announcement, otherwise it contains true/false
+
+			if isAnswer { // Y/N
+				yes, err := strconv.ParseBool(message.Body[1])
+				if err != nil {
+					return err
+				}
+				if yes {
+					n.logf("tree", "Received YES from %d, adding to tree neighbors", sender)
+					n.treeBuilder.AddTreeNeighbor(sender)
+				} else {
+					n.logf("tree", "Received NO from %d, just increasing counter", sender)
+				}
+				if n.treeBuilder.IncreaseCounter() == uint64(n.topologyMan.Length()) {
+					n.logf("tree", "No more neighbors to await, becoming DONE")
+					n.treeBuilder.SwitchToState(protocol.Done)
+				}
+			} else { // Q
+				n.logf("tree", "Received Q leader message from %d: %v. Sending NO", sender, message)
+				leaderId, err := strconv.ParseUint(message.Body[0], 10, 64)
+				if err != nil {
+					return err
+				}
+				n.SendElectionMessage(sender, n.newLeaderResponse(sender, node.NodeId(leaderId), message.ElectionId, false))
+			}
+		}
 		if n.electionCtx.HasReceivedLeader() {
 			n.logf("election", "Received a leader message, by %d, for the current election (mine: %s, received: %s) Confirming.", sender, currentId, receivedId)
 			return nil
@@ -1286,19 +1226,68 @@ func (n *ClusterNode) handleLeaderMessage(message *election_definitions.Election
 		return err
 	}
 
-	n.endElection(node.Follower, node.NodeId(leaderId), message.ElectionId)
-	n.logf("election", "%d said it was leader. closing my election context... with %v", leaderId, n.postElectionCtx.Load())
-	for _, neighbor := range n.neighborList() {
-		if neighbor == sender || neighbor == node.NodeId(leaderId) {
-			continue
+	if n.treeBuilder.GetState() == protocol.Idle {
+		n.endElection(node.Follower, node.NodeId(leaderId), message.ElectionId)
+		n.logf("election", "%d said it was leader. closing my election context... with %v", leaderId, n.postElectionCtx.Load())
+
+		n.logf("tree", "Setting up spanning tree process, im IDLE and received a message")
+		n.treeBuilder.SetRoot(false)
+		n.treeBuilder.SetParent(sender)
+		n.treeBuilder.AddTreeNeighbor(sender)
+		n.logf("tree", "Root{false}, Parent{sender:%d}, TreeNeighbors{%v}", sender, n.treeBuilder.GetTreeNeighbors())
+
+		n.SendElectionMessage(sender, n.newLeaderResponse(sender, node.NodeId(leaderId), message.ElectionId, true))
+		counter := n.treeBuilder.IncreaseCounter()
+
+		n.logf("tree", "Sent yes to %d. Counter = %d", sender, counter)
+		if counter == uint64(n.topologyMan.Length()) { // if 1 neighbor
+			n.logf("tree", "Not any other neighbors... Becoming DONE")
+			n.treeBuilder.SwitchToState(protocol.Done)
+		} else {
+			n.logf("tree", "Other neighbors...")
+			for _, neighbor := range n.neighborList() {
+				if neighbor == sender || neighbor == node.NodeId(leaderId) {
+					continue
+				}
+
+				msg := n.newLeaderAnnouncement(neighbor, node.NodeId(leaderId), message.ElectionId)
+				n.SendElectionMessage(neighbor, msg)
+
+				n.logf("tree", "Sent Q to %d", sender)
+				n.logf("election", "Sent new Leader (%d) message to %d.", leaderId, msg)
+
+				n.logf("tree", "Awaiting responses... Becoming ACTIVE")
+				n.treeBuilder.SwitchToState(protocol.Active)
+			}
 		}
 
-		msg := n.newLeaderMessage(neighbor, node.NodeId(leaderId), message.ElectionId)
-		n.SendElectionMessage(neighbor, msg)
-		n.logf("election", "Sent new Leader (%d) message to %d.", leaderId, msg)
+	} else {
+		n.logf("main", "I dont fuckking know")
 	}
 
 	return nil
+}
+
+func (n *ClusterNode) resetTreeBuilder() {
+	n.treeBuilder.Reset()
+}
+
+func (n *ClusterNode) startShout() {
+
+	n.logf("tree", "Setting up spanning tree process, im INITIATOR")
+	n.treeBuilder.SetRoot(true)
+	n.logf("tree", "Root{true}, Parent{none}, TreeNeighbors{<empty>}")
+
+	electionId := n.electionCtx.GetId()
+	for _, neighbor := range n.neighborList() {
+		n.SendElectionMessage(neighbor, n.newLeaderAnnouncement(neighbor, n.getId(), electionId))
+		n.logf("election", "Sent leader message to %d", neighbor)
+		n.logf("tree", "Sent Q message to %d", neighbor)
+	}
+	n.endElection(node.Leader, n.getId(), electionId)
+
+	n.logf("tree", "Awaiting responses... becoming ACTIVE")
+	n.treeBuilder.SwitchToState(protocol.Active)
 }
 
 func (n *ClusterNode) NewMessageHeader(neighbor node.NodeId, mType protocol.MessageType) *protocol.MessageHeader {
@@ -1340,12 +1329,22 @@ func (n *ClusterNode) newVoteMessage(neighbor node.NodeId, vote, prune bool) pro
 		n.electionCtx.CurrentRound(),
 	)
 }
-func (n *ClusterNode) newLeaderMessage(neighbor node.NodeId, leaderId node.NodeId, electionId election_definitions.ElectionId) protocol.Message {
+func (n *ClusterNode) newLeaderAnnouncement(neighbor node.NodeId, leaderId node.NodeId, electionId election_definitions.ElectionId) protocol.Message {
 	return election_definitions.NewElectionMessage(
 		n.NewMessageHeader(neighbor, protocol.Election),
 		election_definitions.Leader,
 		electionId,
-		[]string{fmt.Sprintf("%d", leaderId)},
+		[]string{fmt.Sprintf("%d", leaderId)}, // aggiungere al body: storage=maxhops(1), input:leaf. Leader registra
+		n.electionCtx.CurrentRound(),
+	)
+}
+
+func (n *ClusterNode) newLeaderResponse(neighbor node.NodeId, leaderId node.NodeId, electionId election_definitions.ElectionId, answer bool) protocol.Message {
+	return election_definitions.NewElectionMessage(
+		n.NewMessageHeader(neighbor, protocol.Election),
+		election_definitions.Leader,
+		electionId,
+		[]string{fmt.Sprintf("%d", leaderId), strconv.FormatBool(answer)},
 		n.electionCtx.CurrentRound(),
 	)
 }
@@ -1371,6 +1370,7 @@ func (n *ClusterNode) destroy() {
 	n.postElectionCtx.Store(nil)
 	n.treeMan = nil
 	n.topologyMan.Destroy()
+	n.cancel()
 }
 
 //============================================================================//
@@ -1399,6 +1399,8 @@ func (n *ClusterNode) AddNeighbor(id node.NodeId, address string) error {
 	err := n.topologyMan.Add(id, address)
 	go func() {
 		time.Sleep(3 * time.Second)
+		n.treeBuilder.Reset()
+		n.treeBuilder.SwitchToState(protocol.Idle)
 		n.SendJoinMessage(id)
 	}()
 	return err
@@ -1460,8 +1462,8 @@ func (n *ClusterNode) sendToNeighbor(id node.NodeId, message protocol.Message) e
 	return n.topologyMan.SendTo(id, payload)
 }
 
-func (n *ClusterNode) poll() (bool, error) {
-	return n.topologyMan.Poll()
+func (n *ClusterNode) poll(timeout time.Duration) error {
+	return n.topologyMan.Poll(timeout)
 }
 
 // Retrieves a message from the topology.

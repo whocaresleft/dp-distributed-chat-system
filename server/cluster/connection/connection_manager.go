@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	zmq "github.com/pebbe/zmq4"
 )
@@ -41,7 +42,7 @@ func ExtractIdentifier(frame []byte) (node.NodeId, error) {
 // It handles election messages, heartbeat (post election) messages and request forwarding
 type ConnectionManager struct {
 	socket *zmq.Socket
-	//poller *zmq.Poller
+	poller *zmq.Poller
 }
 
 // Creates a connection manager setting the identity with the given config.
@@ -63,14 +64,14 @@ func NewConnectionManager(node node.NodeConfig) (*ConnectionManager, error) {
 	}
 
 	r.SetRouterHandover(true)
-	//r.SetRcvtimeo(time.Second)
+	r.SetRcvtimeo(-1)
 
-	//p := zmq.NewPoller()
-	//p.Add(r, zmq.POLLIN)
+	p := zmq.NewPoller()
+	p.Add(r, zmq.POLLIN)
 
 	return &ConnectionManager{
 		r,
-		//p,
+		p,
 	}, nil
 }
 
@@ -148,29 +149,32 @@ func (c *ConnectionManager) SendTo(id string, payload []byte) error {
 }
 
 func (c *ConnectionManager) Recv() ([][]byte, error) {
-	msg, err := c.socket.RecvMessageBytes(0)
+	msg, err := c.socket.RecvMessageBytes(zmq.DONTWAIT)
 	if err != nil {
 		if isRecvNotReadyError(err) {
-			return nil, fmt.Errorf("%s", RecvNotReady)
+			return nil, ErrRecvNotReady
 		}
-		return nil, err
+		return nil, fmt.Errorf("Recv network error: %v", err)
 	}
 	return msg, nil
 }
 
-func (c *ConnectionManager) Poll() (bool, error) {
-	//sockets, err := c.poller.Poll(1 * time.Second)
-	//if err != nil {
-	return false, nil //, err
-	//}
-	//return len(sockets) > 0, nil
+func (c *ConnectionManager) Poll(timeout time.Duration) error {
+	sockets, err := c.poller.Poll(timeout)
+	if err != nil {
+		return fmt.Errorf("Polling error: %v", err)
+	}
+	if len(sockets) == 0 {
+		return ErrRecvNotReady
+	}
+	return nil
 }
 
 func (c *ConnectionManager) Destroy() {
 	c.socket.Close()
 }
 
-const RecvNotReady = "Not ready, retrying"
+var ErrRecvNotReady = errors.New("No data is avaiable to recv() on the socket")
 
 func isRecvNotReadyError(err error) bool {
 	var errno zmq.Errno
