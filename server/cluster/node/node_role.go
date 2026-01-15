@@ -14,38 +14,38 @@ import (
 )
 
 // The Role of a node is an enum, it specifies what are the responsibilities of a particular node in the system
-type NodeRole uint
+type NodeRoleFlags uint8
 
 const (
-	Leader      NodeRole = iota // The node that won the leader election, it distributes the other roles amongst the remaining nodes. It also handles both read and write database operations.
-	Persistence                 // Nodes that handle read-only operations on the database (for consistency). Write operations are forwarded to the leader to handle.
-	Input                       // Nodes that expose endpoints that clients can connect to (they host an HTTP server). They gather client requests and forward them to persistence nodes.
-	Follower                    // Nodes that neither handle database operations, nor they expose an HTTP server; they act as routers inside the system's network, by forwarding requests to the correct nodes.
+	Leader      NodeRoleFlags = 0b00000001 // The node that won the leader election, it distributes the other roles amongst the remaining nodes. It also handles both read and write database operations.
+	Persistence NodeRoleFlags = 0b00000010 // Nodes that handle read-only operations on the database (for consistency). Write operations are forwarded to the leader to handle.
+	Input       NodeRoleFlags = 0b00000100 // Nodes that expose endpoints that clients can connect to (they host an HTTP server). They gather client requests and forward them to persistence nodes.
+	Forwarder   NodeRoleFlags = 0b00001000 // Nodes that neither handle database operations, nor they expose an HTTP server; they act as routers inside the system's network, by forwarding requests to the correct nodes.
 )
 
 // Maps each NodeRole enum variant to a string with it's name as content. Makes JSON marshalling easier, thanks to O(1) lookup.
-var roleToName = map[NodeRole]string{
+var roleToName = map[NodeRoleFlags]string{
 	Leader:      "leader",
 	Persistence: "persistence",
 	Input:       "input",
-	Follower:    "follower",
+	Forwarder:   "forwarder",
 }
 
 // Reverse map of the previous one. Makes JSON un-marshalling easier, thanks to O(1) lookup
-var nameToRole = map[string]NodeRole{
+var nameToRole = map[string]NodeRoleFlags{
 	"leader":      Leader,
 	"persistence": Persistence,
 	"input":       Input,
-	"follower":    Follower,
+	"forwarder":   Forwarder,
 }
 
 // Encodes the NodeRole variant, role, into a JSON field
-func (role *NodeRole) MarshalJSON() ([]byte, error) {
+func (role *NodeRoleFlags) MarshalJSON() ([]byte, error) {
 	return json.Marshal(roleToName[*role])
 }
 
 // Decodes the JSON field (in the byte array) into a NodeRole
-func (role *NodeRole) UnmarshalJSON(b []byte) error {
+func (role *NodeRoleFlags) UnmarshalJSON(b []byte) error {
 	var s string
 	if err := json.Unmarshal(b, &s); err != nil {
 		return err

@@ -26,3 +26,7 @@ func (h *HeartbeatMessage) SetHeader(head *protocol.MessageHeader) {
 func (h *HeartbeatMessage) String() string {
 	return fmt.Sprintf("{Header{%s}}", h.Header.String())
 }
+
+func (h *HeartbeatMessage) Clone() protocol.Message {
+	return NewHeartbeatMessage(h.Header.Clone())
+}

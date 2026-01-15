@@ -14,7 +14,7 @@ import (
 	"server/cluster/node"
 )
 
-const toleratedTimeouts = 10
+const toleratedTimeouts = uint8(10)
 
 type roundContext struct {
 	epoch uint
@@ -92,7 +92,7 @@ type ElectionContext struct {
 	linksOrientation map[node.NodeId]election_definitions.LinkDirection
 	orientationCount map[election_definitions.LinkDirection]uint
 
-	timeoutsCount map[node.NodeId]uint16
+	timeoutsCount map[node.NodeId]uint8
 }
 
 func NewElectionContext(discriminant node.NodeId) *ElectionContext {
@@ -111,7 +111,7 @@ func NewElectionContext(discriminant node.NodeId) *ElectionContext {
 		make(map[uint]*futureRoundContext),
 		make(map[node.NodeId]election_definitions.LinkDirection),
 		orientationCount,
-		make(map[node.NodeId]uint16),
+		make(map[node.NodeId]uint8),
 	}
 }
 
@@ -296,7 +296,7 @@ func (e *ElectionContext) IncreaseTimeout(id node.NodeId) error {
 	return nil
 }
 
-func (e *ElectionContext) GetTimeout(id node.NodeId) (uint16, error) {
+func (e *ElectionContext) GetTimeout(id node.NodeId) (uint8, error) {
 	if !e.Exists(id) {
 		return 0, fmt.Errorf("Node %d is not present, you can add it with .Add() first", id)
 	}
@@ -332,10 +332,8 @@ func (e *ElectionContext) updateLinks() {
 
 	fmt.Println("Entering update links")
 
-	fmt.Printf("Iterating over OUTNODES %v\n", e.OutNodes())
 	for _, outNode := range e.OutNodes() {
 		vote, err := e.RetrieveVote(outNode)
-		fmt.Printf("ID: %v - His vote: %v, is it valid? %v\n", outNode, vote, err)
 		if err != nil {
 			continue
 		}
@@ -344,10 +342,8 @@ func (e *ElectionContext) updateLinks() {
 		}
 	}
 
-	fmt.Printf("Iterating over INNODES %v\n", e.InNodes())
 	for _, inNode := range e.InNodes() {
 		vote, err := e.DetermineVote(inNode)
-		fmt.Printf("ID: %v - My vote to him: %v, is it valid? %v\n", inNode, vote, err)
 		if err != nil {
 			continue
 		}

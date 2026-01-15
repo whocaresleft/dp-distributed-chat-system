@@ -43,10 +43,20 @@ func (h *MessageHeader) String() string {
 	return fmt.Sprintf("Sender{%s}, Destination{%s}, Type{%s}, Timestamp{%d}", h.Sender, h.Destination, h.Type.String(), h.TimeStamp)
 }
 
+func (h *MessageHeader) Clone() *MessageHeader {
+	return &MessageHeader{
+		h.Sender,
+		h.Destination,
+		h.Type,
+		h.TimeStamp,
+	}
+}
+
 type Message interface {
 	GetHeader() *MessageHeader
 	SetHeader(*MessageHeader)
 	String() string
+	Clone() Message
 }
 
 const (
@@ -78,35 +88,35 @@ func (j *TopologyMessage) SetHeader(h *MessageHeader) {
 func (j *TopologyMessage) String() string {
 	return fmt.Sprintf("Header{%s}, Address{%s}, Flags{%v}", j.Header.String(), j.Address, j.Flags)
 }
-
-type TreeState uint8
-
-const (
-	Initiator TreeState = iota
-	Idle
-	Active
-	Done
-)
-
-type TreeMessage struct {
-	Header   MessageHeader `json:"header"`
-	Question bool          `json:"question"`
-	Answer   bool          `json:"answer"`
-}
-
-func NewTreeMessage(h *MessageHeader, question, answer bool) *TreeMessage {
-	return &TreeMessage{
-		Header:   *h,
-		Question: question,
-		Answer:   answer,
+func (j *TopologyMessage) Clone() Message {
+	return &TopologyMessage{
+		*j.Header.Clone(),
+		j.Address,
+		j.Flags,
 	}
 }
-func (t *TreeMessage) GetHeader() *MessageHeader {
-	return &t.Header
+
+type TreeMessage struct {
+	Header MessageHeader `json:"header"`
 }
-func (t *TreeMessage) SetHeader(h *MessageHeader) {
-	t.Header = *h
+
+func NewTreeMessage(h *MessageHeader) *TreeMessage {
+	return &TreeMessage{
+		Header: *h,
+	}
 }
-func (t *TreeMessage) String() string {
-	return fmt.Sprintf("Header{%s}, Question{%v}, Answer{%v}", t.Header.String(), t.Question, t.Answer)
+
+func (j *TreeMessage) GetHeader() *MessageHeader {
+	return &j.Header
+}
+func (j *TreeMessage) SetHeader(h *MessageHeader) {
+	j.Header = *h
+}
+func (j *TreeMessage) String() string {
+	return fmt.Sprintf("Header{%s}", j.Header.String())
+}
+func (j *TreeMessage) Clone() Message {
+	return &TreeMessage{
+		*j.Header.Clone(),
+	}
 }

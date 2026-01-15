@@ -26,7 +26,8 @@ type partecipantNode struct {
 type BootstrapNode struct {
 	protocol.UnimplementedBootstrapServiceServer
 
-	configFile string
+	logger   *log.Logger
+	fileLock sync.Mutex
 
 	assigningIndex uint64
 	numberIndex    uint8
@@ -34,20 +35,36 @@ type BootstrapNode struct {
 	partecipants []partecipantNode
 	topology     map[node.NodeId]([]node.NodeId)
 
+	configFile   string
 	configLock   sync.Mutex
 	inMemoryLock sync.RWMutex
 }
 
-func NewBootstrapNode(configFile string) *BootstrapNode {
+func NewBootstrapNode(logfile string, configFile string) (*BootstrapNode, error) {
+	logFile, err := os.OpenFile(logfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return nil, err
+	}
+	logger := log.New(logFile, "Bootstrap", log.Ldate|log.Ltime|log.Lshortfile)
+	logger.Printf("Bootstrap node created, config{%s}", configFile)
+
 	return &BootstrapNode{
-		configFile:     configFile,
+		logger:         logger,
+		fileLock:       sync.Mutex{},
 		assigningIndex: 0,
 		numberIndex:    0,
 		partecipants:   []partecipantNode{},
 		topology:       make(map[node.NodeId]([]node.NodeId)),
+		configFile:     configFile,
 		configLock:     sync.Mutex{},
 		inMemoryLock:   sync.RWMutex{},
-	}
+	}, nil
+}
+
+func (b *BootstrapNode) logf(format string, v ...any) {
+	b.fileLock.Lock()
+	b.logger.Printf(format, v...)
+	b.fileLock.Unlock()
 }
 
 func (b *BootstrapNode) Register(ctx context.Context, req *protocol.RegisterRequest) (*protocol.RegisterResponse, error) {
@@ -58,6 +75,7 @@ func (b *BootstrapNode) Register(ctx context.Context, req *protocol.RegisterRequ
 
 	// Retrieve, or add and then retrieve topology for node
 	neighborIds := b.RegisterNode(nodeId, req.Address, port)
+	b.logf("Registered new node{%d, %s:%d}. His neighbors are {%v}", nodeId, req.Address, port, neighborIds)
 
 	neighborMap := make(map[uint64]string)
 	for _, neighborId := range neighborIds {
@@ -86,10 +104,11 @@ func (b *BootstrapNode) StartBootstrap() {
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
+	b.logf("Started listening on TCP port 45999")
 	grpcServer := grpc.NewServer()
 	protocol.RegisterBootstrapServiceServer(grpcServer, b)
 
-	fmt.Printf("Awaiting to serve")
+	b.logf("Awaiting to serve")
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -98,6 +117,7 @@ func (b *BootstrapNode) StartBootstrap() {
 func (b *BootstrapNode) RegisterNode(nodeId node.NodeId, ipAddress string, port uint16) []node.NodeId {
 	port16 := uint16(port)
 	fullAddr := fmt.Sprintf("%s:%d", ipAddress, port16)
+	b.logf("Registering new node...ID{%d}, ADDR{%s}", nodeId, fullAddr)
 
 	isThere := false
 	for _, partecipant := range b.partecipants {
@@ -107,11 +127,14 @@ func (b *BootstrapNode) RegisterNode(nodeId node.NodeId, ipAddress string, port 
 		}
 	}
 	if isThere {
+		b.logf("Node %d already present", nodeId)
 		return b.topology[nodeId]
 	}
 
+	b.logf("Node %d is new, calculating his neighbors", nodeId)
 	partecipantCount := len(b.partecipants)
 	if partecipantCount == 0 {
+		b.logf("There are no partecipants, node %d is alone", nodeId)
 		b.partecipants = append(b.partecipants, partecipantNode{nodeId, fullAddr})
 		b.topology[nodeId] = []node.NodeId{}
 		go b.StoreConfig()
@@ -119,8 +142,11 @@ func (b *BootstrapNode) RegisterNode(nodeId node.NodeId, ipAddress string, port 
 	}
 
 	// We need to decide its neighbors
-	neighborCount := int(neighborCountSequence[b.nextNumberIndex()]) // How many neighbors?
+	nextIdx := b.nextNumberIndex()
+	neighborCount := int(neighborCountSequence[nextIdx]) // How many neighbors?
+	b.logf("Calculating number of neighbors for %d: Using idx{%d}, got {%d}", nodeId, nextIdx, neighborCount)
 	if neighborCount > partecipantCount {
+		b.logf("[%d] There are only %d partecipants, shrinking %d => %d", nodeId, partecipantCount, neighborCount, partecipantCount)
 		neighborCount = partecipantCount
 	}
 
@@ -130,6 +156,7 @@ func (b *BootstrapNode) RegisterNode(nodeId node.NodeId, ipAddress string, port 
 		nextId := node.NodeId(b.nextAssigningIndex())
 		nextNeighbor := b.partecipants[nextId]
 		neighbors = append(neighbors, nextNeighbor.Id)
+		b.logf("[%d] Calculating next neighbor: Index{%d}, Neighbor{%v}, currentList{%v}", nodeId, nextId, nextNeighbor, neighbors)
 	}
 
 	b.partecipants = append(b.partecipants, partecipantNode{nodeId, fullAddr}) // Add it later to not cause inconsitencies
@@ -162,8 +189,17 @@ func (b *BootstrapNode) nextNumberIndex() uint8 {
 	b.numberIndex++
 	return b.numberIndex % uint8(len(neighborCountSequence))
 }
+
 func (b *BootstrapNode) nextAssigningIndex() uint64 {
-	b.assigningIndex++
+
+	if len(b.partecipants) == 0 {
+		return 0
+	}
+
+	if b.assigningIndex == 0 {
+		b.assigningIndex = uint64(len(b.partecipants))
+	}
+	b.assigningIndex--
 	return b.assigningIndex % uint64(len(b.partecipants))
 }
 
@@ -197,6 +233,7 @@ func (b *BootstrapNode) StoreConfig() error {
 	file.Close()
 
 	os.Rename(fmt.Sprintf("%s.tmp", b.configFile), b.configFile)
+	b.logf("Storing information on config file... %v", toSave)
 
 	b.configLock.Unlock()
 
@@ -232,5 +269,6 @@ func (b *BootstrapNode) LoadConfig() error {
 	b.partecipants = toSavestruct.Partecipants
 	b.inMemoryLock.Unlock()
 
+	b.logf("Loading config from file...")
 	return nil
 }

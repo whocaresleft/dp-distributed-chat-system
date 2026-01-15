@@ -41,6 +41,7 @@ func ExtractIdentifier(frame []byte) (node.NodeId, error) {
 // A Connection manager is the node's component that handles communication with other nodes in the system.
 // It handles election messages, heartbeat (post election) messages and request forwarding
 type ConnectionManager struct {
+	ctx    *zmq.Context
 	socket *zmq.Socket
 	poller *zmq.Poller
 }
@@ -49,7 +50,12 @@ type ConnectionManager struct {
 func NewConnectionManager(node node.NodeConfig) (*ConnectionManager, error) {
 	nodeId, nodePort := node.GetId(), node.GetPort()
 
-	r, err := zmq.NewSocket(zmq.Type(zmq.ROUTER))
+	context, err := zmq.NewContext()
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := context.NewSocket(zmq.Type(zmq.ROUTER))
 	if err != nil {
 		return nil, fmt.Errorf("Error during the creation of the router ZMQ4 socket for node %d", nodeId)
 	}
@@ -63,13 +69,15 @@ func NewConnectionManager(node node.NodeConfig) (*ConnectionManager, error) {
 		return nil, fmt.Errorf("Could not bind the socket on port %d for node %d", nodePort, nodeId)
 	}
 
-	r.SetRouterHandover(true)
+	//r.SetRouterHandover(true)
+	r.SetRouterMandatory(1)
 	r.SetRcvtimeo(-1)
 
 	p := zmq.NewPoller()
 	p.Add(r, zmq.POLLIN)
 
 	return &ConnectionManager{
+		context,
 		r,
 		p,
 	}, nil
@@ -172,6 +180,7 @@ func (c *ConnectionManager) Poll(timeout time.Duration) error {
 
 func (c *ConnectionManager) Destroy() {
 	c.socket.Close()
+	c.ctx.Term()
 }
 
 var ErrRecvNotReady = errors.New("No data is avaiable to recv() on the socket")

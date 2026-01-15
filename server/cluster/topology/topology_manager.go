@@ -184,7 +184,6 @@ func (t *TopologyManager) MarkAckJoin(neighbor node.NodeId) {
 		return
 	}
 	delete(t.AckJoinPending, neighbor)
-	fmt.Printf("SET %d AS NEIGHBOR FOR REAL", neighbor)
 
 	t.LogicalAdd(neighbor, addr)
 }
@@ -196,7 +195,6 @@ func (t *TopologyManager) MarkReAckJoin(neighbor node.NodeId, address string) {
 		return
 	}
 	delete(t.AckJoinPending, neighbor)
-	fmt.Printf("SET %d AS NEIGHBOR FOR REAL", neighbor)
 
 	t.LogicalAdd(neighbor, address)
 	t.UpdateLastSeen(neighbor, time.Now())

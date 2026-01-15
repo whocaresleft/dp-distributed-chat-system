@@ -156,3 +156,9 @@ func (e *ElectionMessage) SetHeader(h *protocol.MessageHeader) {
 func (e *ElectionMessage) String() string {
 	return fmt.Sprintf("Header{%s}, MessageType{%d}, ElectionID{%s}, Round{%d}, Body{%s}", e.Header.String(), uint8(e.MessageType), e.ElectionId, uint64(e.Round), e.Body)
 }
+
+func (e *ElectionMessage) Clone() protocol.Message {
+	newBody := make([]string, len(e.Body))
+	copy(newBody, e.Body)
+	return NewElectionMessage(e.Header.Clone(), e.MessageType, e.ElectionId, newBody, e.Round)
+}
