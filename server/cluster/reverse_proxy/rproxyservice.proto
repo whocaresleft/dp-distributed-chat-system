@@ -1,0 +1,20 @@
+syntax = "proto3";
+package reverse_proxy;
+option go_package = "./protocol";
+
+service EntryRegistry {
+    rpc RegisterEntry(RegisterRequest) returns (RegisterResponse) {}
+    rpc DeleteEntry(DeleteRequest) returns (DeleteResponse) {}
+}
+message RegisterRequest {
+    string fullAddr = 1;
+}
+message RegisterResponse {
+    bool success = 1;
+}
+message DeleteRequest {
+    string fullAddr = 1;
+}
+message DeleteResponse {
+    bool success = 1;
+}
