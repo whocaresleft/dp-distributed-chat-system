@@ -22,9 +22,9 @@ type Config struct {
 	SecretKey           string `json:"secret-key"`
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(filename string) (*Config, error) {
 
-	file, err := os.OpenFile(".env", os.O_RDONLY, 0755)
+	file, err := os.OpenFile(filename, os.O_RDONLY, 0755)
 	if err != nil {
 		return nil, err
 	}

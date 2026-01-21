@@ -299,6 +299,8 @@ func (n *ClusterNode) setupAndStartDataPlane(ctx context.Context, env control.Da
 func (n *ClusterNode) setupInputManager(authService service.AuthService, ctx context.Context) {
 	if n.inputMan == nil {
 		n.inputMan = input.NewInputManager()
+		inputLogger, _ := n.logger.GetSubsystemLogger("input")
+		n.inputMan.SetLogger(inputLogger)
 	}
 	if n.inputMan.IsRunning() {
 		n.inputMan.SetPause(true)
@@ -311,7 +313,7 @@ func (n *ClusterNode) setupInputManager(authService service.AuthService, ctx con
 }
 
 func (n *ClusterNode) stopInputManager() {
-	if n.inputMan.IsRunning() {
+	if n.inputMan != nil && n.inputMan.IsRunning() {
 		n.inputMan.Stop()
 	}
 }

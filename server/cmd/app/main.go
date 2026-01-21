@@ -15,7 +15,13 @@ func wait() { var i int; fmt.Scan(&i) }
 
 func main() {
 
-	cfg, err := internal.LoadConfig()
+	if len(os.Args) < 2 {
+		fmt.Printf("Config file path needed...\nUsage: %s <.env-path>", os.Args[0])
+	}
+
+	configPath := os.Args[1]
+
+	cfg, err := internal.LoadConfig(configPath)
 	if err != nil {
 		fmt.Printf("Could not load Config for node... Check '.env' file. {%v}", err)
 		return

@@ -115,20 +115,20 @@ func (b *BootstrapNode) getPartecipantById(id node.NodeId) (partecipantNode, err
 	return partecipantNode{}, fmt.Errorf("The node %d is not present", id)
 }
 
-func (b *BootstrapNode) StartBootstrap(ctx context.Context) {
-	lis, err := net.Listen("tcp", ":45999")
+func (b *BootstrapNode) StartBootstrap(ctx context.Context, port uint16) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
 	go b.writeToLogAsync(ctx)
 
-	b.logf("Started listening on TCP port 45999")
+	b.logf("Started listening on TCP port %d", port)
 	grpcServer := grpc.NewServer()
 	protocol.RegisterBootstrapServiceServer(grpcServer, b)
 
 	go func() {
 		<-ctx.Done()
-		b.logf("Shuttind down gRPC server...")
+		b.logf("Shutting down gRPC server...")
 		grpcServer.GracefulStop()
 		b.logf("Server shut down. Bye bye")
 	}()

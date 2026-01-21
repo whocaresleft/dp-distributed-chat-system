@@ -17,7 +17,7 @@ func main() {
 
 	bootstrap, _ := bootstrap.NewBootstrapNode("NODE_-1/bootstrap.log", "NODE_-1/bootconfig.cfg")
 	bootstrap.LoadConfig()
-	bootstrap.StartBootstrap(ctx)
+	bootstrap.StartBootstrap(ctx, 45999)
 
 	<-ctx.Done()
 	fmt.Printf("Shutting down...")

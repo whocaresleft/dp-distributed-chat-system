@@ -27,7 +27,7 @@ func ExtractIdentifier(identifier []byte) (NodeId, error) {
 	return NodeId(id), err
 }
 
-var MinimumValidPort int = 41952
+var MinimumValidPort int = 46000
 var MaximumValidPort int = 65535
 
 // Checks if the given port is valid with respect with the minimum and maximum numbers allowed
