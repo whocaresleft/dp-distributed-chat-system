@@ -12,5 +12,5 @@ type UserSession struct {
 	CreatedAt time.Time      `gorm:"not null; index"`
 	ExpiresAt time.Time      `gorm:"not null; index"`
 	RevokedAt gorm.DeletedAt `gorm:"index"`
-	UserUUID  UUID           `gorm:"not null; index"`
+	UserUUID  string         `gorm:"not null; index"`
 }

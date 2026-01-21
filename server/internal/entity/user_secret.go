@@ -1,7 +1,6 @@
 package entity
 
 type UserSecret struct {
-	UserUUID UUID   `gorm:"primaryKey"`
-	Salt     string `gorm:"not null; index"`
+	UserUUID string `gorm:"primaryKey"`
 	Hash     string `gorm:"not null; index"`
 }

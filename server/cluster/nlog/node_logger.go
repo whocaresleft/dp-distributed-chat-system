@@ -8,6 +8,24 @@ import (
 	"sync"
 )
 
+type Logger interface {
+	Logf(format string, v ...any)
+}
+
+type subsystemLogger struct {
+	filename string
+	logger   *NodeLogger
+}
+
+func (s *subsystemLogger) Logf(format string, v ...any) {
+	s.logger.Logf(s.filename, format, v...)
+}
+
+type logEntry struct {
+	filename  string
+	formatted string
+}
+
 type NodeLogger struct {
 	id node.NodeId
 
@@ -16,6 +34,8 @@ type NodeLogger struct {
 
 	lock           sync.RWMutex
 	currentLogFunc func(*log.Logger, string, ...any)
+
+	inbox chan logEntry
 }
 
 func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
@@ -27,6 +47,7 @@ func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
 		fileMapper:     make(map[string]*os.File),
 		logMapper:      make(map[string]*log.Logger),
 		currentLogFunc: nilLogf,
+		inbox:          make(chan logEntry, 600),
 	}
 
 	if logging {
@@ -36,27 +57,51 @@ func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
 	return n, nil
 }
 
-func (n *NodeLogger) AddLogger(filename string) error {
+func (n *NodeLogger) RegisterSubsystem(filename string) (Logger, error) {
 	file, err := os.OpenFile(fmt.Sprintf("NODE_%d/%s.log", n.id, filename), os.O_WRONLY|os.O_APPEND|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
 	n.logMapper[filename] = log.New(file, fmt.Sprintf("[[Node %d] %s]: ", n.id, filename), log.Ldate|log.Ltime)
 	n.fileMapper[filename] = file
-	return nil
+	return &subsystemLogger{filename, n}, nil
+}
+
+func (n *NodeLogger) GetSubsystemLogger(filename string) (Logger, error) {
+	n.lock.RLock()
+	defer n.lock.RUnlock()
+
+	if _, ok := n.logMapper[filename]; !ok {
+		return nil, fmt.Errorf("The subsystem was not registered")
+	}
+	return &subsystemLogger{filename, n}, nil
 }
 
 func (n *NodeLogger) EnableLogging() {
+	n.lock.Lock()
 	n.currentLogFunc = defaultLogf
+	n.lock.Unlock()
 }
 func (n *NodeLogger) DisableLogging() {
+	n.lock.Lock()
 	n.currentLogFunc = nilLogf
+	n.lock.Unlock()
 }
 
-func (n *NodeLogger) Logf(filename, format string, a ...any) error {
+func (n *NodeLogger) Logf(filename, format string, v ...any) {
+	n.inbox <- logEntry{filename, fmt.Sprintf(format, v...)}
+}
+
+func (n *NodeLogger) Run() {
+	for msg := range n.inbox {
+		n.actualWrite(msg.filename, msg.formatted)
+	}
+}
+
+func (n *NodeLogger) actualWrite(filename, formatted string) error {
 	n.lock.Lock()
 	logFunc := n.currentLogFunc
 	logger, ok := n.logMapper[filename]
@@ -66,7 +111,7 @@ func (n *NodeLogger) Logf(filename, format string, a ...any) error {
 		return fmt.Errorf("Logger is not setup for this filename")
 	}
 	if logFunc != nil {
-		logFunc(logger, format, a...)
+		logFunc(logger, formatted)
 	}
 	return nil
 }

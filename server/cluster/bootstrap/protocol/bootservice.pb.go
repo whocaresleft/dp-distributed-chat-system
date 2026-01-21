@@ -21,6 +21,58 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type NodeInfo struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Host          string                 `protobuf:"bytes,1,opt,name=host,proto3" json:"host,omitempty"`
+	Port          uint32                 `protobuf:"varint,2,opt,name=port,proto3" json:"port,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *NodeInfo) Reset() {
+	*x = NodeInfo{}
+	mi := &file_bootservice_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *NodeInfo) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*NodeInfo) ProtoMessage() {}
+
+func (x *NodeInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_bootservice_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use NodeInfo.ProtoReflect.Descriptor instead.
+func (*NodeInfo) Descriptor() ([]byte, []int) {
+	return file_bootservice_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *NodeInfo) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
+func (x *NodeInfo) GetPort() uint32 {
+	if x != nil {
+		return x.Port
+	}
+	return 0
+}
+
 type RegisterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            uint64                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -32,7 +84,7 @@ type RegisterRequest struct {
 
 func (x *RegisterRequest) Reset() {
 	*x = RegisterRequest{}
-	mi := &file_bootservice_proto_msgTypes[0]
+	mi := &file_bootservice_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +96,7 @@ func (x *RegisterRequest) String() string {
 func (*RegisterRequest) ProtoMessage() {}
 
 func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_bootservice_proto_msgTypes[0]
+	mi := &file_bootservice_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +109,7 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
-	return file_bootservice_proto_rawDescGZIP(), []int{0}
+	return file_bootservice_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *RegisterRequest) GetId() uint64 {
@@ -84,14 +136,14 @@ func (x *RegisterRequest) GetPort() uint32 {
 type RegisterResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Neighbors     map[uint64]string      `protobuf:"bytes,2,rep,name=neighbors,proto3" json:"neighbors,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Neighbors     map[uint64]*NodeInfo   `protobuf:"bytes,2,rep,name=neighbors,proto3" json:"neighbors,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterResponse) Reset() {
 	*x = RegisterResponse{}
-	mi := &file_bootservice_proto_msgTypes[1]
+	mi := &file_bootservice_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -103,7 +155,7 @@ func (x *RegisterResponse) String() string {
 func (*RegisterResponse) ProtoMessage() {}
 
 func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_bootservice_proto_msgTypes[1]
+	mi := &file_bootservice_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -116,7 +168,7 @@ func (x *RegisterResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegisterResponse.ProtoReflect.Descriptor instead.
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return file_bootservice_proto_rawDescGZIP(), []int{1}
+	return file_bootservice_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *RegisterResponse) GetSuccess() bool {
@@ -126,7 +178,7 @@ func (x *RegisterResponse) GetSuccess() bool {
 	return false
 }
 
-func (x *RegisterResponse) GetNeighbors() map[uint64]string {
+func (x *RegisterResponse) GetNeighbors() map[uint64]*NodeInfo {
 	if x != nil {
 		return x.Neighbors
 	}
@@ -137,17 +189,20 @@ var File_bootservice_proto protoreflect.FileDescriptor
 
 const file_bootservice_proto_rawDesc = "" +
 	"\n" +
-	"\x11bootservice.proto\x12\tbootstrap\"O\n" +
+	"\x11bootservice.proto\x12\tbootstrap\"2\n" +
+	"\bNodeInfo\x12\x12\n" +
+	"\x04host\x18\x01 \x01(\tR\x04host\x12\x12\n" +
+	"\x04port\x18\x02 \x01(\rR\x04port\"O\n" +
 	"\x0fRegisterRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x04R\x02id\x12\x18\n" +
 	"\aaddress\x18\x02 \x01(\tR\aaddress\x12\x12\n" +
-	"\x04port\x18\x03 \x01(\rR\x04port\"\xb4\x01\n" +
+	"\x04port\x18\x03 \x01(\rR\x04port\"\xc9\x01\n" +
 	"\x10RegisterResponse\x12\x18\n" +
 	"\asuccess\x18\x01 \x01(\bR\asuccess\x12H\n" +
-	"\tneighbors\x18\x02 \x03(\v2*.bootstrap.RegisterResponse.NeighborsEntryR\tneighbors\x1a<\n" +
+	"\tneighbors\x18\x02 \x03(\v2*.bootstrap.RegisterResponse.NeighborsEntryR\tneighbors\x1aQ\n" +
 	"\x0eNeighborsEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\x04R\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x012Y\n" +
+	"\x03key\x18\x01 \x01(\x04R\x03key\x12)\n" +
+	"\x05value\x18\x02 \x01(\v2\x13.bootstrap.NodeInfoR\x05value:\x028\x012Y\n" +
 	"\x10BootstrapService\x12E\n" +
 	"\bRegister\x12\x1a.bootstrap.RegisterRequest\x1a\x1b.bootstrap.RegisterResponse\"\x00B\fZ\n" +
 	"./protocolb\x06proto3"
@@ -164,21 +219,23 @@ func file_bootservice_proto_rawDescGZIP() []byte {
 	return file_bootservice_proto_rawDescData
 }
 
-var file_bootservice_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_bootservice_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_bootservice_proto_goTypes = []any{
-	(*RegisterRequest)(nil),  // 0: bootstrap.RegisterRequest
-	(*RegisterResponse)(nil), // 1: bootstrap.RegisterResponse
-	nil,                      // 2: bootstrap.RegisterResponse.NeighborsEntry
+	(*NodeInfo)(nil),         // 0: bootstrap.NodeInfo
+	(*RegisterRequest)(nil),  // 1: bootstrap.RegisterRequest
+	(*RegisterResponse)(nil), // 2: bootstrap.RegisterResponse
+	nil,                      // 3: bootstrap.RegisterResponse.NeighborsEntry
 }
 var file_bootservice_proto_depIdxs = []int32{
-	2, // 0: bootstrap.RegisterResponse.neighbors:type_name -> bootstrap.RegisterResponse.NeighborsEntry
-	0, // 1: bootstrap.BootstrapService.Register:input_type -> bootstrap.RegisterRequest
-	1, // 2: bootstrap.BootstrapService.Register:output_type -> bootstrap.RegisterResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 0: bootstrap.RegisterResponse.neighbors:type_name -> bootstrap.RegisterResponse.NeighborsEntry
+	0, // 1: bootstrap.RegisterResponse.NeighborsEntry.value:type_name -> bootstrap.NodeInfo
+	1, // 2: bootstrap.BootstrapService.Register:input_type -> bootstrap.RegisterRequest
+	2, // 3: bootstrap.BootstrapService.Register:output_type -> bootstrap.RegisterResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_bootservice_proto_init() }
@@ -192,7 +249,7 @@ func file_bootservice_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_bootservice_proto_rawDesc), len(file_bootservice_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -162,3 +162,8 @@ func (e *ElectionMessage) Clone() protocol.Message {
 	copy(newBody, e.Body)
 	return NewElectionMessage(e.Header.Clone(), e.MessageType, e.ElectionId, newBody, e.Round)
 }
+
+func (e *ElectionMessage) MarkTimestamp(timestamp uint64) {
+	h := e.GetHeader()
+	h.MarkTimestamp(timestamp)
+}

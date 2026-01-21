@@ -11,10 +11,8 @@ package topology
 import (
 	"errors"
 	"fmt"
-	"net"
-	"server/cluster/connection"
+	"server/cluster/network"
 	"server/cluster/node"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -23,74 +21,54 @@ const timeout = 10 * time.Second
 
 // A TopologyManager is a component of a node that handles its local view inside the cluster's network.
 type TopologyManager struct {
-	id                int
-	neighbors         map[node.NodeId]string // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
+	neighbors         map[node.NodeId]node.Address // Map of neighboring nodes, maps node ids to strings formatted as `<ip-address>:<port-number>`
 	neighborsLastSeen map[node.NodeId]time.Time
-	connectionManager *connection.ConnectionManager // Handles the connections between this node and the neighbors
+	connMan           *network.ConnectionManager // Handles the connections between this node and the neighbors
 
 	randomHeartbeats map[node.NodeId]uint8
-	AckJoinPending   map[node.NodeId]string
-	AckPending       map[node.NodeId]string
+	AckJoinPending   map[node.NodeId]node.Address
+	AckPending       map[node.NodeId]node.Address
 
 	neighborMutex sync.RWMutex
 }
 
-// Checks if the given string is a valid address, that is, formatted as `<ip-address>:<port-number>`.
-func validateAddressString(address string) error {
-	host, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return fmt.Errorf("Address string is mal-formatted: {%s}", address)
-	}
-
-	if net.ParseIP(host) == nil {
-		return fmt.Errorf("The Host (%s) is not valid", host)
-	}
-
-	intPort, err := strconv.Atoi(port)
-	if err != nil {
-		return fmt.Errorf("The port, %s, is not a valid number", port)
-	}
-
-	return node.IsPortValid(intPort)
-}
-
 // Creates a topology manager with an empty map.
-func NewTopologyManager(config node.NodeConfig) (*TopologyManager, error) {
+func NewTopologyManager(id node.NodeId, port uint16) (*TopologyManager, error) {
 
-	connMan, err := connection.NewConnectionManager(config)
+	connMan, err := network.NewConnectionManager(id)
 	if err != nil {
 		return nil, err
 	}
 
+	if err := connMan.Bind(port); err != nil {
+		return nil, err
+	}
+
 	t := &TopologyManager{
-		int(config.Id),
-		make(map[node.NodeId]string),
+		make(map[node.NodeId]node.Address),
 		make(map[node.NodeId]time.Time),
 		connMan,
 		make(map[node.NodeId]uint8),
-		make(map[node.NodeId]string),
-		make(map[node.NodeId]string),
+		make(map[node.NodeId]node.Address),
+		make(map[node.NodeId]node.Address),
 		sync.RWMutex{},
 	}
-
-	//t.connectionManager.StartMonitoring(t.markOn, t.markOff)
-	//t.connectionManager.StartMonitoring(func(string) {}, func(string) {})
 
 	return t, nil
 }
 
 // Adds the pair (node_id, address) to the neighbors.
 // This only works if the neighbor is not already present and the address must be properly formatted as `<ip-address>:<port-number>`.
-func (t *TopologyManager) Add(neighbor node.NodeId, address string) error {
-	if t.Exists(neighbor) {
+func (t *TopologyManager) Add(neighbor node.NodeId, address node.Address) error {
+	if _, ok := t.neighbors[neighbor]; ok {
 		return fmt.Errorf("The ID %d corresponds to an already present neighbor, to replace use .Replace()", neighbor)
 	}
 
-	if err := validateAddressString(address); err != nil {
+	if err := node.ValidateAddress(address); err != nil {
 		return err
 	}
 
-	if err := t.connectionManager.ConnectTo(address); err != nil {
+	if err := t.connMan.ConnectTo(address.FullAddr()); err != nil {
 		return err
 	}
 
@@ -145,12 +123,15 @@ func (t *TopologyManager) RemoveReAckJoinPending(oldNeighbor node.NodeId) {
 func (t *TopologyManager) SetReAckJoinPending(oldNeighbor node.NodeId) {
 	t.AckJoinPending[oldNeighbor] = t.neighbors[oldNeighbor]
 }
+func (t *TopologyManager) SetAckJoinPending(neighbor node.NodeId, address node.Address) {
+	t.AckJoinPending[neighbor] = address
+}
 
 func (t *TopologyManager) SetReAckPending(oldNeighbor node.NodeId) {
 	t.AckPending[oldNeighbor] = t.neighbors[oldNeighbor]
 }
 
-func (t *TopologyManager) SetAckPending(neighbor node.NodeId, address string) {
+func (t *TopologyManager) SetAckPending(neighbor node.NodeId, address node.Address) {
 	t.AckPending[neighbor] = address
 }
 
@@ -188,7 +169,7 @@ func (t *TopologyManager) MarkAckJoin(neighbor node.NodeId) {
 	t.LogicalAdd(neighbor, addr)
 }
 
-func (t *TopologyManager) MarkReAckJoin(neighbor node.NodeId, address string) {
+func (t *TopologyManager) MarkReAckJoin(neighbor node.NodeId, address node.Address) {
 
 	_, ok := t.AckJoinPending[neighbor]
 	if !ok {
@@ -200,26 +181,28 @@ func (t *TopologyManager) MarkReAckJoin(neighbor node.NodeId, address string) {
 	t.UpdateLastSeen(neighbor, time.Now())
 }
 
-func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address string) {
+func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address node.Address) {
 	t.neighborMutex.Lock()
 	defer t.neighborMutex.Unlock()
 
 	t.neighbors[neighbor] = address
 	t.neighborsLastSeen[neighbor] = time.Time{}
+	delete(t.AckJoinPending, neighbor) //jic
+	delete(t.AckPending, neighbor)
 }
 
 // Replaces the address of the given node id with the new one.
 // This only works if the neighbor is already present and the address must be properly formatted as `<ip-address>:<port-number>`.
-func (t *TopologyManager) replace(neighbor node.NodeId, address string) error {
+func (t *TopologyManager) replace(neighbor node.NodeId, address node.Address) error {
 	if !t.Exists(neighbor) {
 		return fmt.Errorf("The ID %d does not correspond to any neighbor, to add it use .Add()", neighbor)
 	}
 
-	if err := validateAddressString(address); err != nil {
+	if err := node.ValidateAddress(address); err != nil {
 		return err
 	}
 
-	if err := t.connectionManager.SwitchAddress(t.neighbors[neighbor], address); err != nil {
+	if err := t.connMan.SwitchAddress(t.neighbors[neighbor].FullAddr(), address.FullAddr()); err != nil {
 		return err
 	}
 
@@ -234,7 +217,7 @@ func (t *TopologyManager) Remove(neighbor node.NodeId) error {
 		return fmt.Errorf("The ID %d does not correspond to any neighbor, can't proceed to deletion", neighbor)
 	}
 
-	if err := t.connectionManager.DisconnectFrom(t.neighbors[neighbor]); err != nil {
+	if err := t.connMan.DisconnectFrom(t.neighbors[neighbor].FullAddr()); err != nil {
 		return err
 	}
 
@@ -248,12 +231,26 @@ func (t *TopologyManager) Remove(neighbor node.NodeId) error {
 
 // Returns the address of the neighbor with given id.
 // It return (address, nil) if the neighbor is present, and (nil, error) otherwise.
-func (t *TopologyManager) Get(neighbor node.NodeId) (string, error) {
-	node, ok := t.neighbors[neighbor]
+func (t *TopologyManager) Get(neighbor node.NodeId) (node.Address, error) {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	addr, ok := t.neighbors[neighbor]
 	if !ok {
-		return "", fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
+		return node.Address{}, fmt.Errorf("The ID %d does not correspond to any neighbor", neighbor)
 	}
-	return node, nil
+	return addr, nil
+}
+
+func (t *TopologyManager) GetHost(neighbor node.NodeId) (string, error) {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.Unlock()
+
+	addr, err := t.Get(neighbor)
+	if err != nil {
+		return "", nil
+	}
+	return addr.Host, nil
 }
 
 func (t *TopologyManager) GetLastSeen(neighbor node.NodeId) (time.Time, error) {
@@ -269,7 +266,7 @@ func (t *TopologyManager) GetLastSeen(neighbor node.NodeId) (time.Time, error) {
 
 // Returns the ID of the neighbor with the given address.
 // It returns (id, nil) if the neighbor is present, and (0, error) otherwise.
-func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error) {
+func (t *TopologyManager) getByAddress(neighborAddr node.Address) (node.NodeId, error) {
 	t.neighborMutex.RLock()
 	defer t.neighborMutex.RUnlock()
 
@@ -278,7 +275,7 @@ func (t *TopologyManager) getByAddress(neighborAddr string) (node.NodeId, error)
 			return k, nil
 		}
 	}
-	return 0, fmt.Errorf("There is no neighbor with address %s", neighborAddr)
+	return 0, fmt.Errorf("There is no neighbor with address %v", neighborAddr)
 }
 
 func (t *TopologyManager) UpdateLastSeen(neighbor node.NodeId, lastSeen time.Time) error {
@@ -306,18 +303,6 @@ func (t *TopologyManager) IsAlive(neighbor node.NodeId) bool {
 	return time.Since(lastSeen) < timeout
 }
 
-func GetOutboundIP() string {
-	return connection.GetOutboundIP()
-}
-
-func Identifier(id node.NodeId) string {
-	return connection.Identifier(id)
-}
-
-func ExtractIdentifier(address string) (node.NodeId, error) {
-	return connection.ExtractIdentifier([]byte(address))
-}
-
 // Checks whether there exists a neighbor with the given id.
 func (t *TopologyManager) Exists(neighbor node.NodeId) bool {
 	_, ok := t.neighbors[neighbor]
@@ -341,15 +326,29 @@ func (t *TopologyManager) IsDisconnected() bool {
 	return t.Length() == 0
 }
 
+func (t *TopologyManager) OnNeighborList() []node.NodeId {
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
+
+	list := make([]node.NodeId, 0)
+
+	for id := range t.neighbors {
+		if t.IsAlive(id) {
+			list = append(list, id)
+		}
+	}
+	return list
+}
+
 // Creates a list with the IDs of all neighbors
 func (t *TopologyManager) NeighborList() []node.NodeId {
-	t.neighborMutex.Lock()
-	defer t.neighborMutex.Unlock()
+	t.neighborMutex.RLock()
+	defer t.neighborMutex.RUnlock()
 
 	list := make([]node.NodeId, t.Length())
 
 	idx := 0
-	for id, _ := range t.neighbors {
+	for id := range t.neighbors {
 		list[idx] = id
 		idx++
 	}
@@ -367,15 +366,15 @@ func (t *TopologyManager) SendTo(neighbor node.NodeId, payload []byte) error {
 	if !(t.Exists(neighbor) || t.isPending(neighbor)) { // If it's neither a neighbor, nor a pending neighbor
 		return fmt.Errorf("Node %d is not a neighbor", neighbor)
 	}
-	return t.connectionManager.SendTo(connection.Identifier(neighbor), payload)
+	return t.connMan.SendTo(neighbor.Identifier(), payload)
 }
 
 func (t *TopologyManager) Recv() (sender node.NodeId, contents [][]byte, err error) {
-	payload, err := t.connectionManager.Recv()
+	payload, err := t.connMan.Recv()
 	if err != nil {
 		return 0, [][]byte{}, err
 	}
-	sender, err = connection.ExtractIdentifier(payload[0])
+	sender, err = node.ExtractIdentifier(payload[0])
 	if err != nil {
 		return 0, [][]byte{}, err
 	}
@@ -383,13 +382,13 @@ func (t *TopologyManager) Recv() (sender node.NodeId, contents [][]byte, err err
 }
 
 func (t *TopologyManager) Destroy() {
-	t.connectionManager.Destroy()
+	t.connMan.Destroy()
 }
 
 func IsRecvNotReadyError(err error) bool {
-	return errors.Is(err, connection.ErrRecvNotReady)
+	return errors.Is(err, network.ErrRecvNotReady)
 }
 
 func (t *TopologyManager) Poll(timeout time.Duration) error {
-	return t.connectionManager.Poll(timeout)
+	return t.connMan.Poll(timeout)
 }

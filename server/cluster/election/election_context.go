@@ -207,7 +207,7 @@ func (e *ElectionContext) NextRound() {
 	delete(e.futureRounds, nextRound)
 }
 
-func (e *ElectionContext) NoMoreFaulty(node node.NodeId) error {
+func (e *ElectionContext) ResetTimeouts(node node.NodeId) error {
 	_, ok := e.timeoutsCount[node]
 	if !ok {
 		return fmt.Errorf("Node %d was not registered", node)
@@ -289,7 +289,7 @@ func (e *ElectionContext) GetOrientation(id node.NodeId) (election_definitions.L
 }
 
 func (e *ElectionContext) IncreaseTimeout(id node.NodeId) error {
-	if !e.Exists(id) {
+	if !e.Exists(id) && id != e.idDiscriminant {
 		return fmt.Errorf("Node %d is not present, you can add it with .Add() first", id)
 	}
 	e.timeoutsCount[id]++
@@ -297,7 +297,7 @@ func (e *ElectionContext) IncreaseTimeout(id node.NodeId) error {
 }
 
 func (e *ElectionContext) GetTimeout(id node.NodeId) (uint8, error) {
-	if !e.Exists(id) {
+	if !e.Exists(id) && id != e.idDiscriminant {
 		return 0, fmt.Errorf("Node %d is not present, you can add it with .Add() first", id)
 	}
 	return e.timeoutsCount[id], nil

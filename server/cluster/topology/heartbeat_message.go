@@ -30,3 +30,7 @@ func (h *HeartbeatMessage) String() string {
 func (h *HeartbeatMessage) Clone() protocol.Message {
 	return NewHeartbeatMessage(h.Header.Clone())
 }
+func (h *HeartbeatMessage) MarkTimestamp(timestamp uint64) {
+	head := h.GetHeader()
+	head.MarkTimestamp(timestamp)
+}

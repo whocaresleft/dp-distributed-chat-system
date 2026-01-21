@@ -1,0 +1,17 @@
+{{ template "base" . }}
+
+{{ define "content" }}
+    <div class="container mt-4">
+        <h1>Forum</h1>
+        <ul class="list-group">
+            {{ range .Posts }}
+            <li class="list-group-item">
+                <a href="/posts/{{ .ID }}">{{ .Title }}</a>
+            </li>
+            {{ end }}
+        </ul>
+    </div>
+{{end}}
+
+{{define "scripts"}}
+{{end}}

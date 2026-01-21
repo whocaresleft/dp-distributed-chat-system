@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"fmt"
+	"server/cluster/node"
 )
 
 type MessageType uint8
@@ -10,16 +11,25 @@ const (
 	Topology MessageType = iota
 	Election
 	Heartbeat
+	Tree
+	Data
 )
 
 var readableType = []string{
 	"Topology",
 	"Election",
 	"Heartbeat",
+	"Tree",
+	"Data",
 }
 
 func (t MessageType) String() string {
 	return readableType[int(t)]
+}
+
+type OutMessage struct {
+	DestId  node.NodeId
+	Message Message
 }
 
 type MessageHeader struct {
@@ -57,24 +67,27 @@ type Message interface {
 	SetHeader(*MessageHeader)
 	String() string
 	Clone() Message
+	MarkTimestamp(uint64)
 }
 
+type Jflags uint8
+
 const (
-	Jflags_JOIN   uint8 = 0b00000001
-	Jfags_ACK     uint8 = 0b00000010
-	Jflags_REJOIN uint8 = 0b00000100
+	Jflags_JOIN   Jflags = 0b00000001
+	Jflags_ACK    Jflags = 0b00000010
+	Jflags_REJOIN Jflags = 0b00000100
 )
 
 type TopologyMessage struct {
 	Header  MessageHeader `json:"header"`
-	Address string        `json:"address"`
-	Flags   uint8         `json:"flags"`
+	Address node.Address  `json:"address"`
+	Flags   Jflags        `json:"flags"`
 }
 
-func NewTopologyMessage(h *MessageHeader, ip string, flags uint8) *TopologyMessage {
+func NewTopologyMessage(h *MessageHeader, address node.Address, flags Jflags) *TopologyMessage {
 	return &TopologyMessage{
 		Header:  *h,
-		Address: ip,
+		Address: address,
 		Flags:   flags,
 	}
 }
@@ -86,37 +99,69 @@ func (j *TopologyMessage) SetHeader(h *MessageHeader) {
 	j.Header = *h
 }
 func (j *TopologyMessage) String() string {
-	return fmt.Sprintf("Header{%s}, Address{%s}, Flags{%v}", j.Header.String(), j.Address, j.Flags)
+	return fmt.Sprintf("Header{%s}, Address{%v}, Flags{%v}", j.Header.String(), j.Address, j.Flags)
 }
 func (j *TopologyMessage) Clone() Message {
 	return &TopologyMessage{
 		*j.Header.Clone(),
-		j.Address,
+		j.Address.Clone(),
 		j.Flags,
 	}
 }
+func (j *TopologyMessage) MarkTimestamp(timestamp uint64) {
+	h := j.GetHeader()
+	h.MarkTimestamp(timestamp)
+}
+
+type TreeFlags uint8
+
+const (
+	TFlags_NONE         TreeFlags = 0b00000000
+	TFlags_EPOCH        TreeFlags = 0b00000001
+	TFlags_NOPARENTREQ  TreeFlags = 0b00000010
+	TFlags_NOPARENTREP  TreeFlags = 0b00000100
+	TFlags_Q            TreeFlags = 0b00001000
+	TFlags_A            TreeFlags = 0b00010000
+	TFLags_INPUTNEXTHOP TreeFlags = 0b00100000
+	TFLags_PARENTPORT   TreeFlags = 0b01000000
+)
 
 type TreeMessage struct {
 	Header MessageHeader `json:"header"`
+	Epoch  uint64        `json:"epoch"`
+	Flags  TreeFlags     `json:"flags"`
+	Body   []string      `json:"body"`
 }
 
-func NewTreeMessage(h *MessageHeader) *TreeMessage {
+func NewTreeMessage(h *MessageHeader, epoch uint64, flags TreeFlags, body []string) *TreeMessage {
 	return &TreeMessage{
 		Header: *h,
+		Epoch:  epoch,
+		Flags:  flags,
+		Body:   body,
 	}
 }
 
-func (j *TreeMessage) GetHeader() *MessageHeader {
-	return &j.Header
+func (t *TreeMessage) GetHeader() *MessageHeader {
+	return &t.Header
 }
-func (j *TreeMessage) SetHeader(h *MessageHeader) {
-	j.Header = *h
+func (t *TreeMessage) SetHeader(h *MessageHeader) {
+	t.Header = *h
 }
-func (j *TreeMessage) String() string {
-	return fmt.Sprintf("Header{%s}", j.Header.String())
+func (t *TreeMessage) String() string {
+	return fmt.Sprintf("Header{%s}, Epoch{%d}, Flags{%d}, Body{%s}", t.Header.String(), t.Epoch, t.Flags, t.Body)
 }
-func (j *TreeMessage) Clone() Message {
+func (t *TreeMessage) Clone() Message {
+	newBody := make([]string, len(t.Body))
+	copy(newBody, t.Body)
 	return &TreeMessage{
-		*j.Header.Clone(),
+		*t.Header.Clone(),
+		t.Epoch,
+		t.Flags,
+		newBody,
 	}
+}
+func (t *TreeMessage) MarkTimestamp(timestamp uint64) {
+	h := t.GetHeader()
+	h.MarkTimestamp(timestamp)
 }
