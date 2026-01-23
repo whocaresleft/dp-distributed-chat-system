@@ -2,19 +2,19 @@ package internal
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 )
 
 type Config struct {
+	FolderPath          string `json:"folder-path"`
 	NodeId              uint64 `json:"node-id"`
 	ControlPlanePort    uint16 `json:"control-plane-port"`
 	DataPlanePort       uint16 `json:"data-plane-port"`
 	EnableLogging       bool   `json:"enable-logging"`
 	BootstrapServerAddr string `json:"bootstrap-server-addr"`
-	DBPath              string `json:"db-path"`
+	DBName              string `json:"db-name"`
 	HTTPServerPort      uint16 `json:"http-server-port"`
 	TemplateDirectory   string `json:"template-directory"`
 	ReadTimeout         int64  `json:"read-timeout"`
@@ -22,9 +22,9 @@ type Config struct {
 	SecretKey           string `json:"secret-key"`
 }
 
-func LoadConfig(filename string) (*Config, error) {
+func LoadConfig(folderPath string) (*Config, error) {
 
-	file, err := os.OpenFile(filename, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(folderPath+"/.cfg", os.O_RDONLY, 0755)
 	if err != nil {
 		return nil, err
 	}
@@ -62,6 +62,5 @@ func RetrieveWebTemplates(templateDir string) (map[string][]string, error) {
 		mapping[filepath.Base(page)] = files
 	}
 
-	fmt.Printf("IO SONO = %v =\n", mapping)
 	return mapping, nil
 }

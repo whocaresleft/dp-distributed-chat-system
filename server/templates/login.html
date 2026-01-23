@@ -1,0 +1,63 @@
+{{template "base" .}}
+
+{{define "content"}}
+    <div class="container mt-4">
+        <h1>Login</h1>
+        <form method="POST" action="/login">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username:</label>
+                <input type="text" name="username" id="username" class="form-control" required>
+            </div>
+            <div class="mb-3">
+                <label for="tag" class="form-label">Tag:</label>
+                <input type="text" name="tag" id="tag" class="form-control" pattern="[0-9]{3,6}" placeholder="Sequence of 3-6 numbers" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password:</label>
+                <input type="password" name="password" id="password" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+        <div id="error-message" class="mt-2 text-danger"></div>
+        <a href="/register" class="btn btn-secondary mt-2">Create an account</a>
+    </div>
+{{end}}
+
+{{define "scripts"}}
+    <script>
+        const form = document.querySelector('form');
+        const errorMessage = document.getElementById('error-message');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const tag = document.getElementById('tag').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        username: username,
+                        tag: tag,
+                        password: password
+                    })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    const errorText = await response.text();
+                    errorMessage.textContent = errorText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                errorMessage.textContent = 'An error occurred. Please try again later.';
+            }
+        });
+    </script>
+{{end}}

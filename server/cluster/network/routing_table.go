@@ -50,6 +50,14 @@ func (r *RoutingTable) GetDownstreamsMap() map[node.NodeId]node.NodeId {
 	return r.downstreamNextHop
 }
 
+func (r *RoutingTable) GetDownstreamHops() map[node.NodeId]struct{} {
+	nextHops := make(map[node.NodeId]struct{})
+	for _, v := range r.downstreamNextHop {
+		nextHops[v] = struct{}{}
+	}
+	return nextHops
+}
+
 func (r *RoutingTable) Clone() *RoutingTable {
 	newMap := make(map[node.NodeId]node.NodeId, len(r.downstreamNextHop))
 

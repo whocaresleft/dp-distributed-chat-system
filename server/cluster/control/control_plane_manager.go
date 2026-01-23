@@ -72,6 +72,10 @@ func NewControlPlaneManager(cfg *node.NodeConfig) *ControlPlaneManager {
 
 	c.runtimeCtx.Store(NewRuntimeContext())
 
+	c.dataPlaneEnv = DataPlaneEnv{
+		false, false, false, &c.runtimeCtx,
+	}
+
 	return c
 }
 
@@ -148,7 +152,7 @@ func (c *ControlPlaneManager) RunInputDispatcher(ctx context.Context) {
 			if IsRecvNotReadyError(err) {
 				continue
 			}
-			c.logf("main", "Polling error %v:", err)
+			c.logf("Polling error %v:", err)
 			time.Sleep(100 * time.Millisecond)
 			continue
 		}
@@ -538,7 +542,7 @@ func (c *ControlPlaneManager) handleFirstTimeJoin(msg *protocol.TopologyMessage)
 
 		c.topologyMan.MarkAck(sourceId)
 		c.MarkAlive(sourceId)
-		c.logf("%d is ON from ACK. A{%v} AJ{%v}", sourceId, c.topologyMan.AckPending, c.topologyMan.AckJoinPending)
+		c.logfTopology("%d is ON from ACK. A{%v} AJ{%v}", sourceId, c.topologyMan.AckPending, c.topologyMan.AckJoinPending)
 
 		// If we are not dealing with an election, we send the current leader
 		lastElection := c.runtimeCtx.Load().GetLastElection()
@@ -679,17 +683,19 @@ func (c *ControlPlaneManager) updateTreeRole() node.NodeRoleFlags {
 	var roleFlags node.NodeRoleFlags = node.RoleFlags_NONE
 
 	treeParent, treeChildren, hasTreeParent := c.GetTreeNeighbors()
-	if !hasTreeParent { // I'm root
+	leaderId := c.runtimeCtx.Load().lastElection.GetLeaderID()
+	if !hasTreeParent && c.GetId() == leaderId { // I'm root
 		roleFlags |= node.RoleFlags_LEADER | node.RoleFlags_PERSISTENCE
 		if len(treeChildren) == 0 {
 			roleFlags |= node.RoleFlags_INPUT
 		}
 	} else {
-		if len(treeChildren) == 0 { // Only 1 tree neighbor (sender) => Leaf => Input
+		if len(treeChildren) == 0 {
 			roleFlags |= node.RoleFlags_INPUT
-		}
-		if treeParent == c.runtimeCtx.Load().lastElection.GetLeaderID() { // MaxHops from leader: 1 => Storage
-			roleFlags |= node.RoleFlags_PERSISTENCE
+		} else {
+			if treeParent == leaderId { // MaxHops from leader: 1 => Storage
+				roleFlags |= node.RoleFlags_PERSISTENCE
+			}
 		}
 	}
 	return roleFlags

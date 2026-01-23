@@ -267,7 +267,7 @@ func (b *BootstrapNode) StoreConfig() error {
 
 func (b *BootstrapNode) LoadConfig() error {
 	b.configLock.Lock()
-	file, err := os.OpenFile(b.configFile, os.O_RDONLY, 0755)
+	file, err := os.OpenFile(b.configFile, os.O_RDONLY|os.O_CREATE, 0755)
 	if err != nil {
 		return err
 	}

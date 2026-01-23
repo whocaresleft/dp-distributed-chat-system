@@ -1,0 +1,19 @@
+{{ template "base" . }}
+
+{{ define "content" }}
+<div class="container mt-4">
+    <h2>Search results</h2>
+    
+    <div class="search-results-container">
+        {{ range .UsersByName }}
+            <div class="card">
+                <a href="/users/{{ .Username | urlquery }}/{{ .Tag | urlquery }}">
+                    {{ .Username }}<span class="tag-style">#{{ .Tag }}</span>
+                </a>
+            </div>
+        {{ else }}
+            <p style="color: var(--text-muted);">No users found.</p>
+        {{ end }}
+    </div>
+</div>
+{{ end }}

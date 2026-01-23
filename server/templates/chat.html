@@ -1,0 +1,35 @@
+{{ define "content" }}
+<h2>Chat with {{ .Username }}#{{ .Tag }}</h2>
+
+<div id="messages">
+  {{ range .Messages }}
+  <div class="card">
+    <strong>{{ .From }}</strong><br>
+    {{ .Content }}
+  </div>
+  {{ end }}
+</div>
+
+<form id="chatForm">
+  <input id="message" placeholder="Message" required>
+  <button type="submit">Send</button>
+</form>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.getElementById("chatForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const msg = document.getElementById("message").value;
+
+  await fetch("", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content: msg })
+  });
+
+  location.reload();
+});
+</script>
+{{ end }}

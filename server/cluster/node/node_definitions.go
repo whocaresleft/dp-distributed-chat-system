@@ -112,11 +112,9 @@ func (r NodeRoleFlags) String() string {
 
 	if r&RoleFlags_PERSISTENCE > 0 {
 		s = fmt.Sprintf("%sPersistence (R", s)
-	}
-
-	if r&RoleFlags_LEADER > 0 {
-		s = fmt.Sprintf("%sW)", s)
-	} else {
+		if r&RoleFlags_LEADER > 0 {
+			s = fmt.Sprintf("%sW", s)
+		}
 		s = fmt.Sprintf("%s)", s)
 	}
 

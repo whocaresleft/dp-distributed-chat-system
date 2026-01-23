@@ -1,0 +1,38 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="container mt-4">
+    <div class="card" style="background: white; padding: 2rem; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 2px 4px rgba(0,0,0,0.05); width: 100%; max-width: 500px; margin: 0 auto;">
+        <h2 style="text-align: center; margin-bottom: 1.5rem;">Search by username</h2>
+        
+        <form id="search-form">
+            <div class="mb-3">
+                <label for="search-username" class="form-label">Insert username:</label>
+                <input type="text" id="search-username" class="form-control" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+        
+        <div id="search-error" class="mt-2 text-danger" style="text-align: center;"></div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-username');
+    const errorDiv = document.getElementById('search-error');
+
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = searchInput.value.trim();
+
+        if (username) {
+            window.location.href = `/users/${encodeURIComponent(username)}`;
+        } else {
+            errorDiv.textContent = "Per favore, inserisci un nome valido.";
+        }
+    });
+</script>
+{{end}}

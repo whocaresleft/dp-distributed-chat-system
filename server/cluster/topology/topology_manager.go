@@ -137,13 +137,11 @@ func (t *TopologyManager) SetAckPending(neighbor node.NodeId, address node.Addre
 
 func (t *TopologyManager) MarkAck(neighbor node.NodeId) {
 
-	t.neighborMutex.Lock()
 	addr, ok := t.AckPending[neighbor]
 	if !ok {
 		return
 	}
 	delete(t.AckPending, neighbor)
-	t.neighborMutex.Unlock()
 
 	t.LogicalAdd(neighbor, addr)
 }
@@ -185,6 +183,10 @@ func (t *TopologyManager) LogicalAdd(neighbor node.NodeId, address node.Address)
 	t.neighborMutex.Lock()
 	defer t.neighborMutex.Unlock()
 
+	t.logicalAddUnsafe(neighbor, address)
+}
+
+func (t *TopologyManager) logicalAddUnsafe(neighbor node.NodeId, address node.Address) {
 	t.neighbors[neighbor] = address
 	t.neighborsLastSeen[neighbor] = time.Time{}
 	delete(t.AckJoinPending, neighbor) //jic
@@ -244,10 +246,10 @@ func (t *TopologyManager) Get(neighbor node.NodeId) (node.Address, error) {
 
 func (t *TopologyManager) GetHost(neighbor node.NodeId) (string, error) {
 	t.neighborMutex.RLock()
-	defer t.neighborMutex.Unlock()
+	defer t.neighborMutex.RUnlock()
 
-	addr, err := t.Get(neighbor)
-	if err != nil {
+	addr, ok := t.neighbors[neighbor]
+	if !ok {
 		return "", nil
 	}
 	return addr.Host, nil

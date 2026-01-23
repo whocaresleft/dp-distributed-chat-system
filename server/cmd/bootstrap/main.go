@@ -11,11 +11,26 @@ import (
 
 func wait() { var i int; fmt.Scan(&i) }
 
+const folderName = "BOOTSTRAP"
+
 func main() {
+	if err := os.MkdirAll(folderName, 0755); err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	bootstrap, _ := bootstrap.NewBootstrapNode("NODE_-1/bootstrap.log", "NODE_-1/bootconfig.cfg")
+	bootstrap, err := bootstrap.NewBootstrapNode(
+		fmt.Sprintf("%s/bootstrap.log", folderName),
+		fmt.Sprintf("%s/bootstrap.cfg", folderName),
+	)
+	if err != nil {
+		fmt.Printf("%s\n", err.Error())
+		return
+	}
+
 	bootstrap.LoadConfig()
 	bootstrap.StartBootstrap(ctx, 45999)
 

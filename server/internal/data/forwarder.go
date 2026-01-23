@@ -1,5 +1,5 @@
 package data
 
 type Forwarder interface {
-	ExecuteRemote(id string, payload []byte) (*DataMessage, error)
+	ExecuteRemote(id string, action Action, epoch uint64, payload []byte) (*DataMessage, error)
 }

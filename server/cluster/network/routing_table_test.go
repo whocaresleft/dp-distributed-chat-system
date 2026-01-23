@@ -8,24 +8,92 @@
 
 package network
 
-import "testing"
+import (
+	"server/cluster/node"
+	"testing"
+)
 
-func TestUnsetUpstreamUsage(t *testing.T)     {}
-func TestUnsetDownstreamUsage(t *testing.T)   {}
-func TestCorrectUpstreamUsage(t *testing.T)   {}
-func TestCorrectDownstreamUsage(t *testing.T) {}
+func TestUnsetUpstreamUsage(t *testing.T) {
+	r1 := NewRoutingTable()
+	_, ok := r1.GetUpstreamNextHop()
+	if ok {
+		t.Errorf("Upstream next hop should not be set, this sohuld be false")
+	}
+}
+func TestUnsetDownstreamUsage(t *testing.T) {
+	r1 := NewRoutingTable()
+
+	r1.SetDownstreamNextHop(2, 1)
+
+	_, ok := r1.GetDownstreamNextHop(2)
+	if !ok {
+		t.Errorf("Downstream next hop should be set, this sohuld be true")
+	}
+
+	_, ok = r1.GetDownstreamNextHop(3)
+	if ok {
+		t.Errorf("Downstream next hop should not be set, this sohuld be false")
+	}
+}
+
+func TestCorrectUpstreamUsage(t *testing.T) {
+
+	up := node.NodeId(1)
+
+	r1 := NewRoutingTable()
+	r1.SetUpstreamNextHop(up)
+
+	nextHop, ok := r1.GetUpstreamNextHop()
+	if !ok {
+		t.Errorf("Upstream next hop should not be set, this sohuld be true")
+	}
+	if nextHop != up {
+		t.Errorf("Upstream next hop should be %d, not %d", up, nextHop)
+	}
+}
+func TestCorrectDownstreamUsage(t *testing.T) {
+	r1 := NewRoutingTable()
+
+	down, nextHop := node.NodeId(2), node.NodeId(1)
+
+	r1.SetDownstreamNextHop(down, nextHop)
+
+	nh, ok := r1.GetDownstreamNextHop(down)
+	if !ok {
+		t.Errorf("Downstream next hop should be set, this sohuld be true")
+	}
+	if nh != nextHop {
+		t.Errorf("Downstream next hop should be %d=>%d, not %d=>%d", down, nextHop, down, nh)
+	}
+}
+
 func TestDeepClone(t *testing.T) {
 	r1 := NewRoutingTable()
 	r1.SetUpstreamPort(50000)
 	r1.SetUpstreamNextHop(4)
 	r1.SetDownstreamNextHop(1, 2)
 	r1.SetDownstreamNextHop(6, 7)
+	r1.SetDownstreamNextHop(5, 3)
 
 	r2 := r1.Clone()
 
-	wasItCloned := r1.GetUpstreamPort() == r2.GetUpstreamPort() &&
-		r1.GetUpstreamNextHop() == r2.GetUpstreamNextHop() &&
-		r1.GetDownstreamNextHop(1) == r2.GetDownstreamNextHop(1) &&
-		r1.GetDownstreamNextHop(6) == r2.GetDownstreamNextHop(6)
+	if r1.GetUpstreamPort() != r2.GetUpstreamPort() {
+		t.Errorf("Port was not cloned")
+	}
 
+	up1, ok1 := r1.GetUpstreamNextHop()
+	up2, ok2 := r2.GetUpstreamNextHop()
+
+	if !(up1 == up2 && ok1 == ok2) {
+		t.Errorf("Upstream next hop was not cloned")
+	}
+
+	for key := range r1.GetDownstreamsMap() {
+		d1, ok1 := r1.GetDownstreamNextHop(key)
+		d2, ok2 := r2.GetDownstreamNextHop(key)
+
+		if !(d1 == d2 && ok1 == ok2) {
+			t.Errorf("Downstream next hop was not cloned")
+		}
+	}
 }

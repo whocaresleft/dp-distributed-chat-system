@@ -14,16 +14,21 @@ import (
 func wait() { var i int; fmt.Scan(&i) }
 
 func main() {
-
 	if len(os.Args) < 2 {
-		fmt.Printf("Config file path needed...\nUsage: %s <.env-path>", os.Args[0])
+		fmt.Printf("Config file path needed...\nUsage: %s <.env-path>\n", os.Args[0])
+		return
 	}
 
 	configPath := os.Args[1]
 
+	if err := os.MkdirAll(configPath, 0755); err != nil {
+		fmt.Printf("%s\n", err)
+		return
+	}
+
 	cfg, err := internal.LoadConfig(configPath)
 	if err != nil {
-		fmt.Printf("Could not load Config for node... Check '.env' file. {%v}", err)
+		fmt.Printf("Could not load Config for node... Check '.cfg' file. {%v}\n", err)
 		return
 	}
 

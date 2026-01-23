@@ -693,6 +693,9 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 					case childTimeouts == topology.TolerableTreeNeighborTimeouts:
 						c.logfTree("Child(%d) has been OFF for some time (%d timeouts). Removing", child, childTimeouts)
 						c.RemoveTreeNeighbor(child) // Or better child death handling
+						if c.GetId() == leaderId && c.treeMan.GetCounter() == 0 {
+							c.becomeTreeDone()
+						}
 					}
 				}
 			}

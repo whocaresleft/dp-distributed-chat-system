@@ -9,6 +9,7 @@ import (
 	"server/cluster/nlog"
 	"server/internal"
 	"server/internal/handler"
+	"server/internal/middleware"
 	"server/internal/service"
 	"server/internal/view"
 	"sync/atomic"
@@ -41,7 +42,11 @@ type InputManager struct { // Manages HTTP input on the input nodes
 	readTimeout        int64
 	writeTimeout       int64
 
+	renderer *view.PageRenderer
+	store    *sessions.CookieStore
+
 	authService service.AuthService
+	userService service.UserService
 }
 
 func NewInputManager() *InputManager {
@@ -54,7 +59,7 @@ func NewInputManager() *InputManager {
 }
 
 func (i *InputManager) IsReady() bool {
-	return i.logger != nil && i.authService != nil
+	return i.logger != nil && i.authService != nil && !i.IsRunning() && i.userService != nil
 }
 
 func (i *InputManager) IsRunning() bool {
@@ -67,6 +72,14 @@ func (i *InputManager) SetLogger(l nlog.Logger) {
 
 func (i *InputManager) SetAuthService(as service.AuthService) {
 	i.authService = as
+}
+
+func (i *InputManager) SetUserService(us service.UserService) {
+	i.userService = us
+}
+
+func (i *InputManager) GetAuthService() service.AuthService {
+	return i.authService
 }
 
 func (i *InputManager) Logf(format string, a ...any) {
@@ -94,8 +107,8 @@ func (i *InputManager) Run(ctx context.Context, cfg *IptConfig) error {
 	}
 	exeDir := filepath.Dir(exePath)
 
-	cookieStore := sessions.NewCookieStore([]byte(cfg.SecretKey))
-	cookieStore.Options = &sessions.Options{
+	i.store = sessions.NewCookieStore([]byte(cfg.SecretKey))
+	i.store.Options = &sessions.Options{
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
@@ -108,18 +121,32 @@ func (i *InputManager) Run(ctx context.Context, cfg *IptConfig) error {
 	if err != nil {
 		return err
 	}
-	renderer := view.NewPageRenderer(templates)
+	i.renderer = view.NewPageRenderer(templates)
 
 	// Handlers
-	authHandler := handler.NewAuthHandler(i.authService, cookieStore, renderer)
+	authHandler := handler.NewAuthHandler(i.authService, i.store, i.renderer)
+	userHandler := handler.NewUserHandler(i.userService, i.store, i.renderer)
 
 	// Router
 	r := mux.NewRouter()
+
+	// Main page
+	r.HandleFunc("/", i.HomeHandler).Methods("GET")
 
 	// Authentication routes
 	r.HandleFunc("/register", authHandler.Register).Methods("POST", "GET")
 	r.HandleFunc("/login", authHandler.Login).Methods("POST", "GET")
 	r.HandleFunc("/logout", authHandler.Logout).Methods("GET")
+
+	// User routes
+	//r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", userHandler.GetMessages).Methods("GET")
+	//r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", userHandler.SendMessage).Methods("POST")
+	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}", middleware.AuthMiddleware(i.store, userHandler.GetUser)).Methods("GET")
+	r.HandleFunc("/users/{username}", middleware.AuthMiddleware(i.store, userHandler.GetUsersByName)).Methods("GET")
+	r.HandleFunc("/users/{uuid}", middleware.AuthMiddleware(i.store, userHandler.DeleteUser)).Methods("DELETE")
+	r.HandleFunc("/users", middleware.AuthMiddleware(i.store, i.SearchHandler)).Methods("GET")
+
+	r.Use(i.PauseMiddleware)
 
 	i.server = &http.Server{
 		Addr:           fmt.Sprintf(":%d", cfg.ServerPort),
@@ -159,7 +186,59 @@ func (i *InputManager) Run(ctx context.Context, cfg *IptConfig) error {
 }
 
 func (i *InputManager) Stop() {
+	i.Logf("Calling close")
 	close(i.stopFromOutsideChan)
+	i.Logf("Sending to internal chan")
 	<-i.doneFromInsideChan
+	i.Logf("Storing run = false")
 	i.running.Store(false)
+}
+
+func (i *InputManager) PauseMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if i.paused.Load() {
+			w.Header().Set("Retry-After", "5")
+			http.Error(w, "Maintainence in progress", http.StatusServiceUnavailable)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (i *InputManager) HomeHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := i.store.Get(r, "auth-session")
+
+	username, okU := session.Values["username"].(string)
+	tag, okT := session.Values["tag"].(string)
+
+	data := map[string]interface{}{
+		"LoggedUser": "",
+		"LoggedTag":  "",
+	}
+
+	if okU && okT {
+		data["LoggedUser"] = username
+		data["LoggedTag"] = tag
+	}
+
+	i.renderer.RenderTemplate(w, "index.html", data)
+}
+
+func (i *InputManager) SearchHandler(w http.ResponseWriter, r *http.Request) {
+	session, _ := i.store.Get(r, "auth-session")
+
+	username, okU := session.Values["username"].(string)
+	tag, okT := session.Values["tag"].(string)
+
+	data := map[string]interface{}{
+		"LoggedUser": "",
+		"LoggedTag":  "",
+	}
+
+	if okU && okT {
+		data["LoggedUser"] = username
+		data["LoggedTag"] = tag
+	}
+
+	i.renderer.RenderTemplate(w, "search_user.html", data)
 }

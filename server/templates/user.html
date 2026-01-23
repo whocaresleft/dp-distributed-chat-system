@@ -1,0 +1,56 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="container mt-4">
+    <div class="card" style="background: white; padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
+        <h2>{{ .ProfiledUser.Username }}<span class="tag-style">#{{ .ProfiledUser.Tag }}</span></h2>
+        
+        <p>User UUID: <span id="user-uuid">{{ .ProfiledUser.UUID }}</span></p>
+
+        <div class="actions" style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+            {{ if and (eq .LoggedUser .ProfiledUser.Username) (eq .LoggedTag .ProfiledUser.Tag) }}
+                <button type="button" id="delete-btn" class="btn" 
+                        style="background: var(--danger); color: white; border: none; cursor: pointer;">
+                    Delete Account
+                </button>
+            {{ else }}
+                <a href="/users/{{ .ProfiledUser.Username | urlquery }}/{{ .ProfiledUser.Tag | urlquery }}/chat" class="btn btn-primary">
+                    Open chat
+                </a>
+            {{ end }}
+        </div>
+        <div id="error-message" class="mt-2 text-danger"></div>
+    </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+    const deleteBtn = document.getElementById('delete-btn');
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+            const uuid = document.getElementById('user-uuid').textContent;
+            
+            if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/users/${uuid}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    window.location.href = '/logout';
+                } else {
+                    const errorText = await response.text();
+                    document.getElementById('error-message').textContent = "Error: " + errorText;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('error-message').textContent = 'An error occurred. Please try again later.';
+            }
+        });
+    }
+</script>
+{{end}}

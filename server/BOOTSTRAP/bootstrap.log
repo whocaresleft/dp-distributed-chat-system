@@ -1,0 +1,160 @@
+Bootstrap2026/01/22 22:00:05 bootstrap.go:52: Bootstrap node created, config{BOOTSTRAP/bootstrap.cfg}
+Bootstrap2026/01/22 22:00:05 bootstrap.go:76: Loading config from file...
+Bootstrap2026/01/22 22:00:05 bootstrap.go:76: Started listening on TCP port 45999
+Bootstrap2026/01/22 22:00:05 bootstrap.go:76: Awaiting to serve
+Bootstrap2026/01/22 22:00:08 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:00:08 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:00:08 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:00:10 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:00:10 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:00:10 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:02:28 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:02:28 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:02:28 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:02:30 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:02:30 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:02:30 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:12:32 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:12:32 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:12:32 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:12:34 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:12:34 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:12:34 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:15:22 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:15:22 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:15:22 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:15:23 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:15:23 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:15:23 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:16:25 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:16:25 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:16:25 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:16:26 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:16:26 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:16:26 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:20:53 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:21:45 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:28:03 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:44:59 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:44:59 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:44:59 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:45:00 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:45:00 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:45:00 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/22 22:46:20 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:22:09 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:22:09 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:22:09 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:22:27 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:22:27 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:22:27 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:26:16 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:26:16 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:26:16 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:26:32 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:26:32 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:26:32 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:29:41 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:33:31 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:33:31 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:33:31 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:33:35 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:33:35 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:33:35 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:41:36 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:41:36 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:41:36 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:41:37 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:41:37 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:41:37 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:44:06 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:44:06 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:44:06 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:44:12 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:44:12 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:44:12 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:44:13 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:44:13 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:44:13 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:47:10 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 00:47:10 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 00:47:10 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Registering new node...ID{3}, ADDR{172.21.196.252:46003}
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Node 3 already present
+Bootstrap2026/01/23 00:47:11 bootstrap.go:76: Registered new node{3, 172.21.196.252:46003}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:08:32 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 01:44:41 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:44:41 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:44:41 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:44:56 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:44:56 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:44:56 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 01:49:16 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:49:16 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:49:16 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 01:49:18 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:49:18 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:49:18 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:54:29 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:54:29 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:54:29 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:54:46 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:54:46 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:54:46 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 01:55:44 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:55:44 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:55:44 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:55:46 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:55:46 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:55:46 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 01:57:38 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 02:09:26 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 02:10:18 bootstrap.go:76: Registering new node...ID{1}, ADDR{172.21.196.252:46001}
+Bootstrap2026/01/23 02:10:18 bootstrap.go:76: Node 1 already present
+Bootstrap2026/01/23 02:10:18 bootstrap.go:76: Registered new node{1, 172.21.196.252:46001}. His neighbors are {[2]}
+Bootstrap2026/01/23 02:10:19 bootstrap.go:76: Registering new node...ID{2}, ADDR{172.21.196.252:46002}
+Bootstrap2026/01/23 02:10:19 bootstrap.go:76: Node 2 already present
+Bootstrap2026/01/23 02:10:19 bootstrap.go:76: Registered new node{2, 172.21.196.252:46002}. His neighbors are {[1 3]}

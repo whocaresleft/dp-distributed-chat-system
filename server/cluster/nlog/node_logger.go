@@ -1,6 +1,7 @@
 package nlog
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -33,12 +34,13 @@ type NodeLogger struct {
 	logMapper  map[string]*log.Logger
 
 	lock           sync.RWMutex
+	clock          *node.LogicalClock
 	currentLogFunc func(*log.Logger, string, ...any)
 
 	inbox chan logEntry
 }
 
-func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
+func NewNodeLogger(id node.NodeId, logging bool, clock *node.LogicalClock) (*NodeLogger, error) {
 	if err := os.MkdirAll(fmt.Sprintf("NODE_%d", id), 0755); err != nil {
 		return nil, err
 	}
@@ -48,6 +50,7 @@ func NewNodeLogger(id node.NodeId, logging bool) (*NodeLogger, error) {
 		logMapper:      make(map[string]*log.Logger),
 		currentLogFunc: nilLogf,
 		inbox:          make(chan logEntry, 600),
+		clock:          clock,
 	}
 
 	if logging {
@@ -92,12 +95,17 @@ func (n *NodeLogger) DisableLogging() {
 }
 
 func (n *NodeLogger) Logf(filename, format string, v ...any) {
-	n.inbox <- logEntry{filename, fmt.Sprintf(format, v...)}
+	n.inbox <- logEntry{filename, fmt.Sprintf(fmt.Sprintf("{%d}. %s", n.clock.Snapshot(), format), v...)}
 }
 
-func (n *NodeLogger) Run() {
-	for msg := range n.inbox {
-		n.actualWrite(msg.filename, msg.formatted)
+func (n *NodeLogger) Run(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-n.inbox:
+			n.actualWrite(msg.filename, msg.formatted)
+		}
 	}
 }
 
