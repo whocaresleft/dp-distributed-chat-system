@@ -11,7 +11,7 @@ import (
 
 func wait() { var i int; fmt.Scan(&i) }
 
-const folderName = "BOOTSTRAP"
+const folderName = "B0OTSTRAP"
 
 func main() {
 	if err := os.MkdirAll(folderName, 0755); err != nil {

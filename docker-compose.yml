@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  bootstrap_node:
+    build: .
+    command: ["./bootstrap"]
+    hostname: bootstrap_node
+    networks:
+      - p2p_network
+  # --- NODO 1 (BOOTSTRAP) ---
+  node1:
+    build: .
+    # Esegue ./node passando la cartella di configurazione
+    command: ["./node", "NODE_1"]
+    hostname: node1
+    ports:
+      # Espone SOLO la porta HTTP (es. 8081 interna -> 8081 esterna)
+      - "8081:8081"
+    networks:
+      - p2p_network
+    depends_on:
+      - bootstrap_node
+
+  # --- NODO 2 ---
+  node2:
+    build: .
+    command: ["./node", "NODE_2"]
+    hostname: node2
+    ports:
+      # Mappa porta HTTP diversa per evitare conflitti sul TUO pc
+      # (dentro il container può rimanere la stessa, ma fuori no)
+      - "8082:8082"
+    networks:
+      - p2p_network
+    depends_on:
+      - bootstrap_node
+
+  # --- NODO 3 ---
+  node3:
+    build: .
+    command: ["./node", "NODE_3"]
+    hostname: node3
+    ports:
+      - "8083:8083"
+    networks:
+      - p2p_network
+    depends_on:
+      - bootstrap_node
+
+  # ... Aggiungi node4, node5, node6 cambiando solo i numeri ...
+
+networks:
+  p2p_network:
+    driver: bridge
