@@ -1,80 +1,93 @@
-[[Node 1] tree]: 2026/01/24 14:13:39 {0}. Started tree handle
-[[Node 1] tree]: 2026/01/24 14:13:42 {158}. Awaiting tree message...
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Setting up spanning tree process, im INITIATOR
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Root{true}, Parent{none}, TreeNeighbors{[]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Sent Q message to 2
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Sent Q message to 4
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Sent Q message to 6
-[[Node 1] tree]: 2026/01/24 14:13:42 {182}. Awaiting responses... becoming ACTIVE
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. 4 My state is Active.
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. Received YES from 4, adding to tree neighbors. Current counter{1}
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. Awaiting -2 responses... [2 4 6]
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. 2 My state is Active.
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. Received YES from 2, adding to tree neighbors. Current counter{2}
-[[Node 1] tree]: 2026/01/24 14:13:42 {188}. Awaiting -1 responses... [6 2 4]
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. 6 My state is Active.
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Received YES from 6, adding to tree neighbors. Current counter{3}
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Awaiting 0 responses... [2 4 6]
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. No more neighbors to await, becoming DONE. My roles: {Persistence (RW)}
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Sending all of my children my port for the data plane...
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Sending (4) the port (50001)
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Sending (2) the port (50001)
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Sending (6) the port (50001)
-[[Node 1] tree]: 2026/01/24 14:13:42 {190}. Started tree epoch counter. Initial value {0}
-[[Node 1] tree]: 2026/01/24 14:13:42 {191}. Message from 6 received: Header{Sender{node-6}, Destination{node-1}, Type{Tree}, Timestamp{188}}, Epoch{0}, Flags{32}, Body{[6]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {191}. (6) told me that (6) is reachable through itself. Current map{map[6:6]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {191}. Awaiting tree message...
-[[Node 1] tree]: 2026/01/24 14:13:42 {199}. Message from 2 received: Header{Sender{node-2}, Destination{node-1}, Type{Tree}, Timestamp{198}}, Epoch{0}, Flags{32}, Body{[5]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {199}. (2) told me that (5) is reachable through itself. Current map{map[5:2 6:6]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {199}. Awaiting tree message...
-[[Node 1] tree]: 2026/01/24 14:13:42 {202}. Message from 4 received: Header{Sender{node-4}, Destination{node-1}, Type{Tree}, Timestamp{201}}, Epoch{0}, Flags{32}, Body{[3]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {202}. (4) told me that (3) is reachable through itself. Current map{map[3:4 5:2 6:6]}
-[[Node 1] tree]: 2026/01/24 14:13:42 {202}. Awaiting tree message...
-[[Node 1] tree]: 2026/01/24 14:13:44 {213}. Sending current counter{0} to 6
-[[Node 1] tree]: 2026/01/24 14:13:44 {213}. Sending current counter{0} to 4
-[[Node 1] tree]: 2026/01/24 14:13:44 {213}. Sending current counter{0} to 2
-[[Node 1] tree]: 2026/01/24 14:13:46 {232}. Sending current counter{1} to 2
-[[Node 1] tree]: 2026/01/24 14:13:46 {232}. Sending current counter{1} to 6
-[[Node 1] tree]: 2026/01/24 14:13:46 {232}. Sending current counter{1} to 4
-[[Node 1] tree]: 2026/01/24 14:13:48 {251}. Sending current counter{2} to 6
-[[Node 1] tree]: 2026/01/24 14:13:48 {251}. Sending current counter{2} to 4
-[[Node 1] tree]: 2026/01/24 14:13:48 {251}. Sending current counter{2} to 2
-[[Node 1] tree]: 2026/01/24 14:13:50 {270}. Sending current counter{3} to 6
-[[Node 1] tree]: 2026/01/24 14:13:50 {270}. Sending current counter{3} to 4
-[[Node 1] tree]: 2026/01/24 14:13:50 {270}. Sending current counter{3} to 2
-[[Node 1] tree]: 2026/01/24 14:13:52 {287}. Sending current counter{4} to 6
-[[Node 1] tree]: 2026/01/24 14:13:52 {287}. Sending current counter{4} to 4
-[[Node 1] tree]: 2026/01/24 14:13:52 {287}. Sending current counter{4} to 2
-[[Node 1] tree]: 2026/01/24 14:13:54 {306}. Sending current counter{5} to 6
-[[Node 1] tree]: 2026/01/24 14:13:54 {306}. Sending current counter{5} to 4
-[[Node 1] tree]: 2026/01/24 14:13:54 {306}. Sending current counter{5} to 2
-[[Node 1] tree]: 2026/01/24 14:13:56 {324}. Sending current counter{6} to 6
-[[Node 1] tree]: 2026/01/24 14:13:56 {324}. Sending current counter{6} to 4
-[[Node 1] tree]: 2026/01/24 14:13:56 {324}. Sending current counter{6} to 2
-[[Node 1] tree]: 2026/01/24 14:13:58 {343}. Sending current counter{7} to 6
-[[Node 1] tree]: 2026/01/24 14:13:58 {343}. Sending current counter{7} to 4
-[[Node 1] tree]: 2026/01/24 14:13:58 {343}. Sending current counter{7} to 2
-[[Node 1] tree]: 2026/01/24 14:13:59 {362}. Sending current counter{8} to 6
-[[Node 1] tree]: 2026/01/24 14:13:59 {362}. Sending current counter{8} to 4
-[[Node 1] tree]: 2026/01/24 14:13:59 {362}. Sending current counter{8} to 2
-[[Node 1] tree]: 2026/01/24 14:14:01 {381}. Sending current counter{9} to 6
-[[Node 1] tree]: 2026/01/24 14:14:01 {381}. Sending current counter{9} to 4
-[[Node 1] tree]: 2026/01/24 14:14:01 {381}. Sending current counter{9} to 2
-[[Node 1] tree]: 2026/01/24 14:14:03 {400}. Sending current counter{10} to 6
-[[Node 1] tree]: 2026/01/24 14:14:03 {400}. Sending current counter{10} to 4
-[[Node 1] tree]: 2026/01/24 14:14:03 {400}. Sending current counter{10} to 2
-[[Node 1] tree]: 2026/01/24 14:14:05 {419}. Sending current counter{11} to 4
-[[Node 1] tree]: 2026/01/24 14:14:05 {419}. Sending current counter{11} to 2
-[[Node 1] tree]: 2026/01/24 14:14:05 {419}. Sending current counter{11} to 6
-[[Node 1] tree]: 2026/01/24 14:14:07 {437}. Sending current counter{12} to 6
-[[Node 1] tree]: 2026/01/24 14:14:07 {437}. Sending current counter{12} to 4
-[[Node 1] tree]: 2026/01/24 14:14:07 {437}. Sending current counter{12} to 2
-[[Node 1] tree]: 2026/01/24 14:14:09 {454}. Sending current counter{13} to 6
-[[Node 1] tree]: 2026/01/24 14:14:09 {454}. Sending current counter{13} to 4
-[[Node 1] tree]: 2026/01/24 14:14:09 {454}. Sending current counter{13} to 2
-[[Node 1] tree]: 2026/01/24 14:14:11 {473}. Sending current counter{14} to 6
-[[Node 1] tree]: 2026/01/24 14:14:11 {473}. Sending current counter{14} to 4
-[[Node 1] tree]: 2026/01/24 14:14:11 {473}. Sending current counter{14} to 2
-[[Node 1] tree]: 2026/01/24 14:14:13 {492}. Sending current counter{15} to 4
-[[Node 1] tree]: 2026/01/24 14:14:13 {492}. Sending current counter{15} to 2
-[[Node 1] tree]: 2026/01/24 14:14:13 {492}. Sending current counter{15} to 6
+[[Node 1] tree]: 2026/01/24 15:57:12 {0}. Started tree handle
+[[Node 1] tree]: 2026/01/24 15:57:15 {24}. Awaiting tree message...
+[[Node 1] tree]: 2026/01/24 15:57:15 {24}. Setting up spanning tree process, im INITIATOR
+[[Node 1] tree]: 2026/01/24 15:57:15 {24}. Root{true}, Parent{none}, TreeNeighbors{[]}
+[[Node 1] tree]: 2026/01/24 15:57:15 {24}. Sent Q message to 2
+[[Node 1] tree]: 2026/01/24 15:57:15 {24}. Awaiting responses... becoming ACTIVE
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Message from 2 received: Header{Sender{node-2}, Destination{node-1}, Type{Tree}, Timestamp{28}}, Epoch{0}, Flags{32}, Body{[2]}
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. (2) told me that (2) is reachable through itself. Current map{map[2:2]}
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Awaiting tree message...
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. 2 My state is Active.
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Received YES from 2, adding to tree neighbors. Current counter{1}
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Awaiting 0 responses... [2]
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. No more neighbors to await, becoming DONE. My roles: {Persistence (RW)}
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Sending all of my children my port for the data plane...
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Sending (2) the port (50001)
+[[Node 1] tree]: 2026/01/24 15:57:15 {29}. Started tree epoch counter. Initial value {0}
+[[Node 1] tree]: 2026/01/24 15:57:17 {36}. Sending current counter{0} to 2
+[[Node 1] tree]: 2026/01/24 15:57:19 {41}. Sending current counter{1} to 2
+[[Node 1] tree]: 2026/01/24 15:57:21 {48}. Sending current counter{2} to 2
+[[Node 1] tree]: 2026/01/24 15:57:23 {53}. Sending current counter{3} to 2
+[[Node 1] tree]: 2026/01/24 15:57:25 {58}. Sending current counter{4} to 2
+[[Node 1] tree]: 2026/01/24 15:57:27 {63}. Sending current counter{5} to 2
+[[Node 1] tree]: 2026/01/24 15:57:29 {70}. Sending current counter{6} to 2
+[[Node 1] tree]: 2026/01/24 15:57:31 {76}. Sending current counter{7} to 2
+[[Node 1] tree]: 2026/01/24 15:57:33 {80}. Sending current counter{8} to 2
+[[Node 1] tree]: 2026/01/24 15:57:35 {85}. Sending current counter{9} to 2
+[[Node 1] tree]: 2026/01/24 15:57:37 {90}. Sending current counter{10} to 2
+[[Node 1] tree]: 2026/01/24 15:57:39 {95}. Sending current counter{11} to 2
+[[Node 1] tree]: 2026/01/24 15:57:41 {100}. Sending current counter{12} to 2
+[[Node 1] tree]: 2026/01/24 15:57:43 {105}. Sending current counter{13} to 2
+[[Node 1] tree]: 2026/01/24 15:57:45 {112}. Sending current counter{14} to 2
+[[Node 1] tree]: 2026/01/24 15:57:47 {117}. Sending current counter{15} to 2
+[[Node 1] tree]: 2026/01/24 15:57:49 {122}. Sending current counter{16} to 2
+[[Node 1] tree]: 2026/01/24 15:57:51 {127}. Sending current counter{17} to 2
+[[Node 1] tree]: 2026/01/24 15:57:53 {132}. Sending current counter{18} to 2
+[[Node 1] tree]: 2026/01/24 15:57:55 {137}. Sending current counter{19} to 2
+[[Node 1] tree]: 2026/01/24 15:57:57 {142}. Sending current counter{20} to 2
+[[Node 1] tree]: 2026/01/24 15:57:59 {147}. Sending current counter{21} to 2
+[[Node 1] tree]: 2026/01/24 15:58:01 {155}. Sending current counter{22} to 2
+[[Node 1] tree]: 2026/01/24 15:58:03 {159}. Sending current counter{23} to 2
+[[Node 1] tree]: 2026/01/24 15:58:05 {164}. Sending current counter{24} to 2
+[[Node 1] tree]: 2026/01/24 15:58:07 {169}. Sending current counter{25} to 2
+[[Node 1] tree]: 2026/01/24 15:58:09 {174}. Sending current counter{26} to 2
+[[Node 1] tree]: 2026/01/24 15:58:11 {180}. Sending current counter{27} to 2
+[[Node 1] tree]: 2026/01/24 15:58:13 {184}. Sending current counter{28} to 2
+[[Node 1] tree]: 2026/01/24 15:58:15 {189}. Sending current counter{29} to 2
+[[Node 1] tree]: 2026/01/24 15:58:17 {196}. Sending current counter{30} to 2
+[[Node 1] tree]: 2026/01/24 15:58:19 {201}. Sending current counter{31} to 2
+[[Node 1] tree]: 2026/01/24 15:58:21 {206}. Sending current counter{32} to 2
+[[Node 1] tree]: 2026/01/24 15:58:23 {211}. Sending current counter{33} to 2
+[[Node 1] tree]: 2026/01/24 15:58:25 {216}. Sending current counter{34} to 2
+[[Node 1] tree]: 2026/01/24 15:58:27 {221}. Sending current counter{35} to 2
+[[Node 1] tree]: 2026/01/24 15:58:29 {226}. Sending current counter{36} to 2
+[[Node 1] tree]: 2026/01/24 15:58:31 {231}. Sending current counter{37} to 2
+[[Node 1] tree]: 2026/01/24 15:58:33 {238}. Sending current counter{38} to 2
+[[Node 1] tree]: 2026/01/24 15:58:35 {243}. Sending current counter{39} to 2
+[[Node 1] tree]: 2026/01/24 15:58:37 {248}. Sending current counter{40} to 2
+[[Node 1] tree]: 2026/01/24 15:58:39 {253}. Sending current counter{41} to 2
+[[Node 1] tree]: 2026/01/24 15:58:41 {258}. Sending current counter{42} to 2
+[[Node 1] tree]: 2026/01/24 15:58:43 {263}. Sending current counter{43} to 2
+[[Node 1] tree]: 2026/01/24 15:58:45 {268}. Sending current counter{44} to 2
+[[Node 1] tree]: 2026/01/24 15:58:47 {273}. Sending current counter{45} to 2
+[[Node 1] tree]: 2026/01/24 15:58:49 {280}. Sending current counter{46} to 2
+[[Node 1] tree]: 2026/01/24 15:58:51 {285}. Sending current counter{47} to 2
+[[Node 1] tree]: 2026/01/24 15:58:53 {290}. Sending current counter{48} to 2
+[[Node 1] tree]: 2026/01/24 15:58:55 {295}. Sending current counter{49} to 2
+[[Node 1] tree]: 2026/01/24 15:58:57 {300}. Sending current counter{50} to 2
+[[Node 1] tree]: 2026/01/24 15:58:59 {305}. Sending current counter{51} to 2
+[[Node 1] tree]: 2026/01/24 15:59:01 {310}. Sending current counter{52} to 2
+[[Node 1] tree]: 2026/01/24 15:59:03 {315}. Sending current counter{53} to 2
+[[Node 1] tree]: 2026/01/24 15:59:05 {323}. Sending current counter{54} to 2
+[[Node 1] tree]: 2026/01/24 15:59:07 {327}. Sending current counter{55} to 2
+[[Node 1] tree]: 2026/01/24 15:59:09 {332}. Sending current counter{56} to 2
+[[Node 1] tree]: 2026/01/24 15:59:11 {337}. Sending current counter{57} to 2
+[[Node 1] tree]: 2026/01/24 15:59:13 {342}. Sending current counter{58} to 2
+[[Node 1] tree]: 2026/01/24 15:59:15 {347}. Sending current counter{59} to 2
+[[Node 1] tree]: 2026/01/24 15:59:17 {352}. Sending current counter{60} to 2
+[[Node 1] tree]: 2026/01/24 15:59:19 {357}. Sending current counter{61} to 2
+[[Node 1] tree]: 2026/01/24 15:59:21 {364}. Sending current counter{62} to 2
+[[Node 1] tree]: 2026/01/24 15:59:23 {369}. Sending current counter{63} to 2
+[[Node 1] tree]: 2026/01/24 15:59:25 {374}. Sending current counter{64} to 2
+[[Node 1] tree]: 2026/01/24 15:59:27 {379}. Sending current counter{65} to 2
+[[Node 1] tree]: 2026/01/24 15:59:29 {384}. Sending current counter{66} to 2
+[[Node 1] tree]: 2026/01/24 15:59:31 {389}. Sending current counter{67} to 2
+[[Node 1] tree]: 2026/01/24 15:59:33 {394}. Sending current counter{68} to 2
+[[Node 1] tree]: 2026/01/24 15:59:35 {399}. Sending current counter{69} to 2
+[[Node 1] tree]: 2026/01/24 15:59:37 {406}. Sending current counter{70} to 2
+[[Node 1] tree]: 2026/01/24 15:59:39 {411}. Sending current counter{71} to 2
+[[Node 1] tree]: 2026/01/24 15:59:41 {416}. Sending current counter{72} to 2
+[[Node 1] tree]: 2026/01/24 15:59:43 {421}. Sending current counter{73} to 2
+[[Node 1] tree]: 2026/01/24 15:59:45 {426}. Sending current counter{74} to 2
+[[Node 1] tree]: 2026/01/24 15:59:47 {431}. Sending current counter{75} to 2
+[[Node 1] tree]: 2026/01/24 15:59:49 {437}. Sending current counter{76} to 2

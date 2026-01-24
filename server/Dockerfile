@@ -11,6 +11,8 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /server-app ./cmd/app/main.go
+RUN go build -o /node ./cmd/app/main.go
+RUN go build -o /bootstrap ./cmd/bootstrap/main.go
+RUN go build -o /nameserevr ./cmd/nameserevr/main.go
 
-CMD ["/server-app"]
+CMD ["./node"]

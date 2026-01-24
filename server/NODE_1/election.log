@@ -1,145 +1,45 @@
-[[Node 1] election]: 2026/01/24 14:13:39 {0}. Started election handle
-[[Node 1] election]: 2026/01/24 14:13:39 {58}. Preparing election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {59}. Resetting the election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Orienting the nodes with current neighbors
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. 2: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. 4: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. 6: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Calculating election 59-1 status: I am Source
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Setup the election context
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent START message to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent START message to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent START message to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Yo down started for round 0
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Sent to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {60}. Preparing election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {61}. Resetting the election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Orienting the nodes with current neighbors
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. 2: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. 4: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. 6: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Calculating election 61-1 status: I am Source
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Setup the election context
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent START message to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent START message to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent START message to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Yo down started for round 0
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {62}. Sent to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {77}. Preparing election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {78}. Resetting the election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Orienting the nodes with current neighbors
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. 2: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. 4: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. 6: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Calculating election 78-1 status: I am Source
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Setup the election context
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent START message to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent START message to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent START message to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Yo down started for round 0
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Sent to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {79}. Preparing election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {80}. Resetting the election context...
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Orienting the nodes with current neighbors
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. 2: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. 4: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. 6: Outgoing
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Calculating election 80-1 status: I am Source
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Setup the election context
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent START message to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent START message to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent START message to 6
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Yo down started for round 0
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent to 4
-[[Node 1] election]: 2026/01/24 14:13:39 {81}. Sent to 6
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-4}, Destination{node-1}, Type{Election}, Timestamp{54}}, MessageType{0}, ElectionID{}, Round{0}, Body{[50-4]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. 4 sent me a weaker START message: received{50-4}, mine{80-1}. Ignoring it.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{56}}, MessageType{0}, ElectionID{}, Round{0}, Body{[52-2]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. 2 sent me a weaker START message: received{52-2}, mine{80-1}. Ignoring it.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{55}}, MessageType{0}, ElectionID{}, Round{0}, Body{[51-6]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. 6 sent me a weaker START message: received{51-6}, mine{80-1}. Ignoring it.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{98}}, MessageType{2}, ElectionID{59-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Proposal message received by 6 for a weaker, older, election 59-1, ignoring.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{100}}, MessageType{2}, ElectionID{61-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Proposal message received by 6 for a weaker, older, election 61-1, ignoring.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{101}}, MessageType{2}, ElectionID{78-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Proposal message received by 6 for a weaker, older, election 78-1, ignoring.
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{103}}, MessageType{2}, ElectionID{80-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Stored the vote of true by 6, waiting for 3 more votes...  Pruning asked: true
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-4}, Destination{node-1}, Type{Election}, Timestamp{151}}, MessageType{2}, ElectionID{80-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Stored the vote of true by 4, waiting for 2 more votes...  Pruning asked: true
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{156}}, MessageType{2}, ElectionID{80-1}, Round{0}, Body{[true false]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Stored the vote of true by 2, waiting for 1 more votes...  Pruning asked: false
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Got all votes
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Preparing for next round...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Context prepared, current round is 1 and I am Source
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Yo down started for round 1
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:42 {158}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{169}}, MessageType{2}, ElectionID{80-1}, Round{1}, Body{[true false]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Stored the vote of true by 2, waiting for 1 more votes...  Pruning asked: false
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Got all votes
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Preparing for next round...
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Context prepared, current round is 2 and I am Source
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Yo down started for round 2
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:42 {170}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{177}}, MessageType{2}, ElectionID{80-1}, Round{2}, Body{[true false]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Stored the vote of true by 2, waiting for 1 more votes...  Pruning asked: false
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Got all votes
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Preparing for next round...
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Context prepared, current round is 3 and I am Source
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Yo down started for round 3
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Source: Sending my id to out nodes...
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Sent to 2
-[[Node 1] election]: 2026/01/24 14:13:42 {178}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{181}}, MessageType{2}, ElectionID{80-1}, Round{3}, Body{[true true]}. Current state{Waiting Yo Up}
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Stored the vote of true by 2, waiting for 1 more votes...  Pruning asked: true
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Got all votes
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Preparing for next round...
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Context prepared, current round is 4 and I am Winner
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Yo down started for round 4
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. I won the election, sending my ID to others
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Sent leader message to 2
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Sent leader message to 4
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Sent leader message to 6
-[[Node 1] election]: 2026/01/24 14:13:42 {182}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Election message received: Header{Sender{node-4}, Destination{node-1}, Type{Election}, Timestamp{186}}, MessageType{3}, ElectionID{80-1}, Round{2}, Body{[1 A true]}. Current state{Idle}
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Received a leader message, by 4, for the current election (mine: 80-1, received: 80-1) Confirming.
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{185}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 A true]}. Current state{Idle}
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Received a leader message, by 2, for the current election (mine: 80-1, received: 80-1) Confirming.
-[[Node 1] election]: 2026/01/24 14:13:42 {188}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:42 {190}. Election message received: Header{Sender{node-6}, Destination{node-1}, Type{Election}, Timestamp{187}}, MessageType{3}, ElectionID{80-1}, Round{1}, Body{[1 A true]}. Current state{Idle}
-[[Node 1] election]: 2026/01/24 14:13:42 {190}. Received a leader message, by 6, for the current election (mine: 80-1, received: 80-1) Confirming.
-[[Node 1] election]: 2026/01/24 14:13:42 {190}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:13:57 {336}. Timeout occurred... Current state is Idle
-[[Node 1] election]: 2026/01/24 14:13:57 {336}. Awaiting election message...
-[[Node 1] election]: 2026/01/24 14:14:11 {473}. Timeout occurred... Current state is Idle
-[[Node 1] election]: 2026/01/24 14:14:11 {473}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:57:12 {0}. Started election handle
+[[Node 1] election]: 2026/01/24 15:57:12 {10}. Preparing election context...
+[[Node 1] election]: 2026/01/24 15:57:12 {11}. Resetting the election context...
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Orienting the nodes with current neighbors
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. 2: Outgoing
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Calculating election 11-1 status: I am Source
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Setup the election context
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Sent START message to 2
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Yo down started for round 0
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Source: Sending my id to out nodes...
+[[Node 1] election]: 2026/01/24 15:57:12 {12}. Sent to 2
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{23}}, MessageType{2}, ElectionID{11-1}, Round{0}, Body{[true true]}. Current state{Waiting Yo Up}
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Stored the vote of true by 2, waiting for 1 more votes...  Pruning asked: true
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Got all votes
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Preparing for next round...
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Context prepared, current round is 1 and I am Winner
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Yo down started for round 1
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. I won the election, sending my ID to others
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Sent leader message to 2
+[[Node 1] election]: 2026/01/24 15:57:15 {24}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:57:15 {29}. Election message received: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{27}}, MessageType{3}, ElectionID{11-1}, Round{1}, Body{[1 A true]}. Current state{Idle}
+[[Node 1] election]: 2026/01/24 15:57:15 {29}. Received a leader message, by 2, for the current election (mine: 11-1, received: 11-1) Confirming.
+[[Node 1] election]: 2026/01/24 15:57:15 {29}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:57:30 {74}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:57:30 {74}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:57:45 {112}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:57:45 {112}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:58:00 {153}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:58:00 {153}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:58:15 {190}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:58:15 {190}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:58:30 {230}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:58:30 {230}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:58:45 {269}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:58:45 {269}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:59:00 {309}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:59:00 {309}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:59:15 {348}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:59:15 {348}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:59:30 {388}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:59:30 {388}. Awaiting election message...
+[[Node 1] election]: 2026/01/24 15:59:45 {427}. Timeout occurred... Current state is Idle
+[[Node 1] election]: 2026/01/24 15:59:45 {427}. Awaiting election message...

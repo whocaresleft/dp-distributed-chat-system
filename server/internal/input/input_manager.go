@@ -170,64 +170,36 @@ func (i *InputManager) Run(ctx context.Context, cfg *IptConfig) error {
 	r.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) { i.authHandler.Logout(w, r) }).Methods("GET")
 
 	// User routes
-	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.messageHandler.GetDMMessages)
-	}).Methods("GET")
+	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", middleware.AuthMiddleware(i.store, i.messageHandler.GetDMMessages)).Methods("GET")
 
-	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.messageHandler.CreateDMMessage)
-	}).Methods("POST")
+	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}/chat", middleware.AuthMiddleware(i.store, i.messageHandler.CreateDMMessage)).Methods("POST")
 
-	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.userHandler.GetUser)
-	}).Methods("GET")
+	r.HandleFunc("/users/{username}/{tag:[0-9]{3,6}}", middleware.AuthMiddleware(i.store, i.userHandler.GetUser)).Methods("GET")
 
-	r.HandleFunc("/users/{username}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.userHandler.GetUsersByName)
-	}).Methods("GET")
+	r.HandleFunc("/users/{username}", middleware.AuthMiddleware(i.store, i.userHandler.GetUsersByName)).Methods("GET")
 
-	r.HandleFunc("/users/{uuid}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.userHandler.DeleteUser)
-	}).Methods("DELETE")
+	r.HandleFunc("/users/{uuid}", middleware.AuthMiddleware(i.store, i.userHandler.DeleteUser)).Methods("DELETE")
 
 	r.HandleFunc("/users", middleware.AuthMiddleware(i.store, i.SearchHandler)).Methods("GET")
 
 	// Group routes
-	r.HandleFunc("/groups/{uuid}/chat", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.messageHandler.GetGroupMessages)
-	}).Methods("GET")
+	r.HandleFunc("/groups/{uuid}/chat", middleware.AuthMiddleware(i.store, i.messageHandler.GetGroupMessages)).Methods("GET")
 
-	r.HandleFunc("/groups/{uuid}/chat", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.messageHandler.CreateGroupMessage)
-	}).Methods("POST")
+	r.HandleFunc("/groups/{uuid}/chat", middleware.AuthMiddleware(i.store, i.messageHandler.CreateGroupMessage)).Methods("POST")
 
-	r.HandleFunc("/groups/{uuid}/members", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.GetGroupUsers)
-	}).Methods("GET")
+	r.HandleFunc("/groups/{uuid}/members", middleware.AuthMiddleware(i.store, i.groupHandler.GetGroupUsers)).Methods("GET")
 
-	r.HandleFunc("/groups/{uuid}/members", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.AddGroupUser)
-	}).Methods("POST")
+	r.HandleFunc("/groups/{uuid}/members", middleware.AuthMiddleware(i.store, i.groupHandler.AddGroupUser)).Methods("POST")
 
-	r.HandleFunc("/groups/{group-uuid}/members/{user-uuid}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.RemoveGroupUser)
-	}).Methods("DELETE")
+	r.HandleFunc("/groups/{group-uuid}/members/{user-uuid}", middleware.AuthMiddleware(i.store, i.groupHandler.RemoveGroupUser)).Methods("DELETE")
 
-	r.HandleFunc("/groups/{uuid}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.GetGroup)
-	}).Methods("GET")
+	r.HandleFunc("/groups/{uuid}", middleware.AuthMiddleware(i.store, i.groupHandler.GetGroup)).Methods("GET")
 
-	r.HandleFunc("/groups/{uuid}", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.DeleteGroup)
-	}).Methods("DELETE")
+	r.HandleFunc("/groups/{uuid}", middleware.AuthMiddleware(i.store, i.groupHandler.DeleteGroup)).Methods("DELETE")
 
-	r.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.CreateGroupForm)
-	}).Methods("GET")
+	r.HandleFunc("/groups", middleware.AuthMiddleware(i.store, i.groupHandler.CreateGroupForm)).Methods("GET")
 
-	r.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
-		middleware.AuthMiddleware(i.store, i.groupHandler.CreateGroup)
-	}).Methods("POST")
+	r.HandleFunc("/groups", middleware.AuthMiddleware(i.store, i.groupHandler.CreateGroup)).Methods("POST")
 
 	// Applies the pause middleware on each route (check down for information)
 	r.Use(i.PauseMiddleware)
