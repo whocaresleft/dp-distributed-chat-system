@@ -7,20 +7,26 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// This repository is used to manipulate the users in the system. It allows CR_D (Create, Read and Delete operations) on the users
+// uint64's are used since the write opearations change the system's epoch, while syncing operations apply the received one.
 type UserRepository interface {
-	Create(user *entity.User) (uint64, error)
-	SynCreate(user *entity.User, incomingEpoch uint64) (uint64, error)
+	Create(user *entity.User) (uint64, error)                          // Inserts a user in the repository
+	SynCreate(user *entity.User, incomingEpoch uint64) (uint64, error) // Synchronizes the creation of a user (performed by replicas)
 
-	SoftDelete(uuid string) (uint64, error)
-	SynSoftDelete(uuid string, incomingEpoch uint64) (uint64, error)
+	SoftDelete(uuid string) (uint64, error)                          // Soft deletes the user (the record remains, it's just marked deleted)
+	SynSoftDelete(uuid string, incomingEpoch uint64) (uint64, error) // Synchronizes the deletion of the user (performed by replicas)
 
-	GetForLogin(name, tag string) (*entity.User, error)
+	GetForLogin(name, tag string) (*entity.User, error) // Retrieves the user with given name and tag, it also returns it's hashed password, hence, used for login.
 
-	GetByUUID(uuid string) (*entity.User, error)
-	GetByNameTag(name, tag string) (*entity.User, error)
-	GetByName(name string) ([]*entity.User, error)
+	GetByUUID(uuid string) (*entity.User, error)             // Retrieves the user with the given uuid.
+	GetByNameTag(name, tag string) (*entity.User, error)     // Retreives the user with the given name and tag.
+	GetByName(name string) ([]*entity.User, error)           // Retrieves the users that share the given name
+	GetGroups(name, tag string) ([]*entity.ChatGroup, error) // Retrieves all the groups the user with name and tag is in
+
+	GetAll() ([]*entity.User, error) // Retrieves all the users, WITH their secret
 }
 
+// Implementation of the repository using a SQLite DB
 type SQLiteUserRepository struct {
 	db *gorm.DB
 }
@@ -144,7 +150,7 @@ func (repo *SQLiteUserRepository) GetByUUID(uuid string) (*entity.User, error) {
 
 func (repo *SQLiteUserRepository) GetByNameTag(username, tag string) (*entity.User, error) {
 	var user entity.User
-	err := repo.db.Where("username = ? AND tag = ?", username, tag).First(&user).Error
+	err := repo.db.Preload("Groups").Where("username = ? AND tag = ?", username, tag).First(&user).Error
 	return &user, err
 }
 
@@ -152,4 +158,16 @@ func (repo *SQLiteUserRepository) GetByName(username string) ([]*entity.User, er
 	var users []*entity.User
 	err := repo.db.Where("username = ?", username).Find(&users).Error
 	return users, err
+}
+
+func (repo *SQLiteUserRepository) GetAll() ([]*entity.User, error) {
+	var users []*entity.User
+	err := repo.db.Preload("Secret").Find(&users).Error
+	return users, err
+}
+
+func (repo *SQLiteUserRepository) GetGroups(name, tag string) ([]*entity.ChatGroup, error) {
+	var user entity.User
+	err := repo.db.Preload("Groups").Where("Username = ? AND Tag = ?", name, tag).First(&user).Error
+	return user.Groups, err
 }

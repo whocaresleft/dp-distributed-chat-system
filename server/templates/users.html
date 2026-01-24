@@ -1,9 +1,11 @@
 {{ template "base" . }}
 
+{{ define "refresher" }}
+{{ end }}
+
 {{ define "content" }}
 <div class="container mt-4">
     <h2>Search results</h2>
-    
     <div class="search-results-container">
         {{ range .UsersByName }}
             <div class="card">

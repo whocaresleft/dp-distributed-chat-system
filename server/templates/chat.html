@@ -1,35 +1,123 @@
-{{ define "content" }}
-<h2>Chat with {{ .Username }}#{{ .Tag }}</h2>
+{{ template "base" .}}
 
-<div id="messages">
-  {{ range .Messages }}
-  <div class="card">
-    <strong>{{ .From }}</strong><br>
-    {{ .Content }}
+{{ define "refresher" }}
+<meta http-equiv="refresh" content="5">
+{{ end }}
+
+{{ define "content" }}
+<h2>{{ .OtherUser.Username }}#{{ .OtherUser.Tag }}'s DM</h2>
+
+<div class="chat-container">
+  <div id="messages">
+    {{ $lastDate := "" }}
+    {{ range .Messages }}
+    {{ $currentDate := .CreatedAt.Format "02/01/2006" }}
+
+    {{ if ne $currentDate $lastDate }}
+    <div class="date-divider">
+      <span>{{ $currentDate }}</span>
+    </div>
+    {{ $lastDate = $currentDate }}
+    {{ end }}
+
+    {{ if eq .SenderUUID $.OtherUser.UUID }}
+    <div class="message-card received">
+      <span class="message-author">{{$.OtherUser.Username}}#{{$.OtherUser.Tag}}</span>
+      <div class="message-text">{{ .Content }}</div>
+      <span class="message-time">{{.CreatedAt.Format "15:04" }}</span>
+    </div>
+    {{ else }}
+    <div class="message-card sent">
+      <div class="message-text">{{ .Content }}</div>
+      <span class="message-author">{{$.LoggedUser}}#{{$.LoggedTag}}</span>
+      <span class="message-time">{{.CreatedAt.Format "15:04" }}</span>
+    </div>
+    {{ end }}
+
+    {{ end }}
   </div>
-  {{ end }}
 </div>
 
-<form id="chatForm">
-  <input id="message" placeholder="Message" required>
+<form id="send-msg-form" method="POST">
+  <input type="text" name="msg-to-send" id="msg-to-send" placeholder="Start typing here..." required>
   <button type="submit">Send</button>
 </form>
 {{ end }}
 
 {{ define "scripts" }}
 <script>
-document.getElementById("chatForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    window.onbeforeunload = function() {
+        localStorage.setItem("chat-scroll", document.getElementById('messages').scrollTop);
+    };
 
-  const msg = document.getElementById("message").value;
-
-  await fetch("", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: msg })
+  window.onload = function() {
+    const container = document.getElementById('messages');
+    const scrollPos = localStorage.getItem("chat-scroll");
+    if (scrollPos) {
+      container.scrollTop = scrollPos
+    } else {
+      container.scrollTop = container.scrollHeight
+    }
+  }
+  const sendForm = document.getElementById('send-msg-form')
+  const content = document.getElementById('msg-to-send')
+  sendForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const trimmedContent = content.value.trim();
+    if (!content) return;
+    try {
+      const response = await fetch(window.location.pathname, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          content: trimmedContent
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        prependMessageToList(data);
+        document.getElementById('msg-to-send').value = '';
+      } else {
+        console.error("Error serverside: ", response.status);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
   });
 
-  location.reload();
-});
+  function prependMessageToList(data) {
+    const msg = data.message;
+    const other = data.other;
+    const myName = data.myname;
+    const myTag = data.mytag;
+    const timeStr = new Date(msg['created-at']).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    const container = document.getElementById('messages');
+    const msgDiv = document.createElement('div');
+    const isReceived = (msg.sender === other.uuid)
+    const side = isReceived ? 'received' : 'sent';
+    msgDiv.className = `message-card ${side}`;
+    if (isReceived) {
+      msgDiv.innerHTML = `
+          <span class="message-author">${other.username}#${other.tag}</span>
+          <div class="message-text">${msg.content}</div>
+          <span class="message-author">${timeStr}</span>
+      `;
+    } else {
+      msgDiv.innerHTML = `
+          <div class="message-text">${msg.content}</div>
+          <span class="message-author">${myName}#${myTag}</span>
+          <span class="message-author">${timeStr}</span>
+      `;
+    }
+    container.appendChild(msgDiv);
+    container.scrollIntoView({
+      behavior: 'smooth'
+    })
+  }
 </script>
 {{ end }}

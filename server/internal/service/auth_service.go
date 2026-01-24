@@ -4,25 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"server/cluster/nlog"
+	"server/cluster/node/protocol"
 	"server/internal/data"
 	"server/internal/entity"
-	repository "server/internal/repository"
+	"server/internal/repository"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
+// Service used for the user registration and login phases
 type AuthService interface {
-	Register(username, tag, password string) (*entity.User, uint64, error)
-	Login(username, tag, password string, lastEpoch uint64) (*entity.User, uint64, error)
+	Register(username, tag, password string) (*entity.User, uint64, error)                // Tries to create a new user in the system, returing it if successful
+	Login(username, tag, password string, lastEpoch uint64) (*entity.User, uint64, error) // Tries to authenticate a user via its credentials, returing the user entity if successful.
 }
 
-// Proxy auth service is the implementation of the auth service on the input nodes.
-// Since they hold no database, they can only forward the request upstream towards a node that can handle it.
+// Proxy is the implementation of the service on the input nodes.
+// Since they hold no database, they can only forward the request towards a node that can handle it.
 type proxyAuthService struct {
-	forwarder data.Forwarder
-	logger    nlog.Logger
+	forwarder data.Forwarder // Forwards the requests and returns the responses
+	logger    nlog.Logger    // Logs a format string
 }
 
 func NewProxyAuthService(forwarder data.Forwarder, logger nlog.Logger) AuthService {
@@ -48,12 +50,12 @@ func (p *proxyAuthService) Register(username, tag, password string) (*entity.Use
 		return nil, 0, err
 	}
 
-	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), data.ActionUserRegister, 0, payload)
+	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), protocol.ActionUserRegister, 0, payload)
 	if err != nil {
 		p.Logf("Received error on request execution {%v}", err)
 		return nil, 0, err
 	}
-	if response.Status != data.SUCCESS {
+	if response.Status != protocol.SUCCESS {
 		s := fmt.Errorf("Registration failed... Try again later. %v", response.ErrorMessage)
 		p.Logf("%s", s.Error())
 		return nil, 0, s
@@ -78,12 +80,12 @@ func (p *proxyAuthService) Login(username, tag, password string, lastEpoch uint6
 		return nil, 0, err
 	}
 
-	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), data.ActionUserLogin, lastEpoch, payload)
+	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), protocol.ActionUserLogin, lastEpoch, payload)
 	if err != nil {
 		p.Logf("Received error on request execution {%v}", err)
 		return nil, 0, err
 	}
-	if response.Status != data.SUCCESS {
+	if response.Status != protocol.SUCCESS {
 		s := fmt.Errorf("Login failed... Try again later. %v", response.ErrorMessage)
 		p.Logf("%v", s.Error())
 		return nil, 0, s
@@ -98,22 +100,21 @@ func (p *proxyAuthService) Login(username, tag, password string, lastEpoch uint6
 	return &u, response.Epoch, nil
 }
 
-// Local auth service is the implementation of the auth service on the persistence nodes.
-// If the service is WRITE-ENABLED, he can write to the database. Otherwise, it can only read from it's replica, only if it's time consistent
+// Local service is the implementation of the service on the persistence nodes.
+// If the service is WRITE-ENABLED, he can write to the database.
+// Otherwise, it can only read from it's replica, only if it's up to date (this endpoins is reachable only if write-enabled).
 type localAuthService struct {
-	canWrite         bool
-	forwarder        data.Forwarder
-	userRepository   repository.UserRepository
-	globalRepository repository.GlobalRepository
-	logger           nlog.Logger
+	canWrite         bool                        // Is this service node write enables?
+	userRepository   repository.UserRepository   // Repository for users
+	globalRepository repository.GlobalRepository // Repository for a global stsate
+	logger           nlog.Logger                 // Logs a format string
 }
 
-func NewLocalAuthService(canWrite bool, userRepo repository.UserRepository, globalRepo repository.GlobalRepository, forwarder data.Forwarder, logger nlog.Logger) AuthService {
+func NewLocalAuthService(canWrite bool, userRepo repository.UserRepository, globalRepo repository.GlobalRepository, logger nlog.Logger) AuthService {
 	return &localAuthService{
 		canWrite:         canWrite,
 		userRepository:   userRepo,
 		globalRepository: globalRepo,
-		forwarder:        forwarder,
 		logger:           logger,
 	}
 }

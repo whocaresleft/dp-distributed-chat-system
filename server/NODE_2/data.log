@@ -1,0 +1,16 @@
+[[Node 2] data]: 2026/01/24 14:13:39 {0}. Started awaiting for Data Plane Envirovement config...
+[[Node 2] data]: 2026/01/24 14:13:42 {197}. Received envirovement config{{false true true 0xc00026fae0}}
+[[Node 2] data]: 2026/01/24 14:13:42 {199}. Binding port 50002
+[[Node 2] data]: 2026/01/24 14:13:42 {199}. Started data plane manager
+[[Node 2] data]: 2026/01/24 14:13:42 {199}. Started message handle
+[[Node 2] data]: 2026/01/24 14:13:42 {199}. Started async sender
+[[Node 2] data]: 2026/01/24 14:13:42 {199}. Started async receiver
+[[Node 2] data]: 2026/01/24 14:13:42 {200}. About to send the message to 1... map[]
+[[Node 2] data]: 2026/01/24 14:13:44 {218}. Connection did not exist... Creating one with (1 => 172.21.196.252:50001)...[172.21.196.252:50001]
+[[Node 2] data]: 2026/01/24 14:13:44 {218}. Sending to (node-1)...
+[[Node 2] data]: 2026/01/24 14:13:46 {235}. Waiting to recv a message...
+[[Node 2] data]: 2026/01/24 14:13:46 {235}. Recv'd a message from 1
+[[Node 2] data]: 2026/01/24 14:13:46 {236}. Message received on receiver: From 1, Sender{node-1}, Destination{node-2}, Type{Data}, Timestamp{218}
+[[Node 2] data]: 2026/01/24 14:13:46 {236}. I received a snapshot respose from node-1. Syncing
+[[Node 2] data]: 2026/01/24 14:13:46 {236}. CALLING UPDATE CACHE, OLD VAL: 33, NEW VAL: 33
+[[Node 2] data]: 2026/01/24 14:13:46 {236}. No error after SYNCALL

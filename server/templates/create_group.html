@@ -1,0 +1,51 @@
+{{template "base" . }}
+
+{{ define "refresher" }}
+{{ end }}
+
+{{ define "content" }}
+<div class="container mt-4">
+  <h1>Create group</h1>
+  <form method="POST" action="/groups">
+    <div class="mb-3">
+      <label for="groupname" class="form-label">Group name:</label>
+      <input type="text" name="groupname" id="groupname" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Create group</button>
+  </form>
+  <div id="error-message" class="mt-2 text-danger"></div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+  const form = document.querySelector('form');
+  const errorMessage = document.getElementById('error-message');
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const groupname = document.getElementById('groupname').value;
+    try {
+      const response = await fetch('/groups', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          groupname: groupname,
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const newUUID = data.group.uuid;
+        window.location.href = `/groups/${newUUID}`;
+      } else {
+        const errorText = await response.text();
+        errorMessage.textContent = errorText;
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      errorMessage.textContent = 'An error occurred. Please try again later.';
+    }
+  });
+</script>
+{{end}}

@@ -1,0 +1,107 @@
+[[Node 6] election]: 2026/01/24 14:13:37 {0}. Started election handle
+[[Node 6] election]: 2026/01/24 14:13:39 {50}. Preparing election context...
+[[Node 6] election]: 2026/01/24 14:13:39 {51}. Resetting the election context...
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Orienting the nodes with current neighbors
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. 1: Incoming
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Calculating election 51-6 status: I am Sink
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Setup the election context
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Sent START message to 1
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Sent START to all my ON neighbors, waiting confirm or earlier election proposal
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Yo down started for round 0
+[[Node 6] election]: 2026/01/24 14:13:39 {52}. Sink: waiting for inlinks to send proposals
+[[Node 6] election]: 2026/01/24 14:13:40 {95}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {95}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{66}}, MessageType{0}, ElectionID{}, Round{0}, Body{[59-1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {95}. 1 sent me a stronger START message: received{59-1}, mine{51-6}. Switching to this one
+[[Node 6] election]: 2026/01/24 14:13:40 {95}. Preparing election context for election {59-1}...
+[[Node 6] election]: 2026/01/24 14:13:40 {95}. Resetting the election context...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Orienting the nodes with current neighbors
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. 1: Incoming
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Calculating election 59-1 status: I am Sink
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Finished setup for the election context
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Ignoring 1 as it is the sender
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Yo down started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Sink: waiting for inlinks to send proposals
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{67}}, MessageType{1}, ElectionID{59-1}, Round{0}, Body{[1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Stored the proposal of 1 by 1, waiting for 0 more votes...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Got all proposals, calculating the smallest ID... {1}
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Yo up started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. SINK: Got all the proposals, need to send votes back
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. I have a single parent, need pruning
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Sent vote true to 1
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Preparing for next round...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Context prepared, current round is 1 and I am Loser
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{73}}, MessageType{0}, ElectionID{}, Round{0}, Body{[61-1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. 1 sent me a stronger START message: received{61-1}, mine{59-1}. Switching to this one
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Preparing election context for election {61-1}...
+[[Node 6] election]: 2026/01/24 14:13:40 {96}. Resetting the election context...
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Orienting the nodes with current neighbors
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. 1: Incoming
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Calculating election 61-1 status: I am Sink
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Finished setup for the election context
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Ignoring 1 as it is the sender
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Yo down started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Sink: waiting for inlinks to send proposals
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{77}}, MessageType{1}, ElectionID{61-1}, Round{0}, Body{[1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Stored the proposal of 1 by 1, waiting for 0 more votes...
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Got all proposals, calculating the smallest ID... {1}
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. Yo up started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. SINK: Got all the proposals, need to send votes back
+[[Node 6] election]: 2026/01/24 14:13:40 {97}. I have a single parent, need pruning
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Sent vote true to 1
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Preparing for next round...
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Context prepared, current round is 1 and I am Loser
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{84}}, MessageType{0}, ElectionID{}, Round{0}, Body{[78-1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. 1 sent me a stronger START message: received{78-1}, mine{61-1}. Switching to this one
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Preparing election context for election {78-1}...
+[[Node 6] election]: 2026/01/24 14:13:40 {98}. Resetting the election context...
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Orienting the nodes with current neighbors
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. 1: Incoming
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Calculating election 78-1 status: I am Sink
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Finished setup for the election context
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Ignoring 1 as it is the sender
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Yo down started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Sink: waiting for inlinks to send proposals
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{87}}, MessageType{1}, ElectionID{78-1}, Round{0}, Body{[1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Stored the proposal of 1 by 1, waiting for 0 more votes...
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Got all proposals, calculating the smallest ID... {1}
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Yo up started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. SINK: Got all the proposals, need to send votes back
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. I have a single parent, need pruning
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Sent vote true to 1
+[[Node 6] election]: 2026/01/24 14:13:40 {99}. Preparing for next round...
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. Context prepared, current round is 1 and I am Loser
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{90}}, MessageType{0}, ElectionID{}, Round{0}, Body{[80-1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. 1 sent me a stronger START message: received{80-1}, mine{78-1}. Switching to this one
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. Preparing election context for election {80-1}...
+[[Node 6] election]: 2026/01/24 14:13:40 {101}. Resetting the election context...
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Orienting the nodes with current neighbors
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. 1: Incoming
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Calculating election 80-1 status: I am Sink
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Finished setup for the election context
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Ignoring 1 as it is the sender
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Yo down started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Sink: waiting for inlinks to send proposals
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{93}}, MessageType{1}, ElectionID{80-1}, Round{0}, Body{[1]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Stored the proposal of 1 by 1, waiting for 0 more votes...
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Got all proposals, calculating the smallest ID... {1}
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Yo up started for round 0
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. SINK: Got all the proposals, need to send votes back
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. I have a single parent, need pruning
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Sent vote true to 1
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Preparing for next round...
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Context prepared, current round is 1 and I am Loser
+[[Node 6] election]: 2026/01/24 14:13:40 {102}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:42 {186}. Election message received: Header{Sender{node-1}, Destination{node-6}, Type{Election}, Timestamp{185}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 Q 0]}. Current state{Waiting Yo Down}
+[[Node 6] election]: 2026/01/24 14:13:42 {186}. 1 said it was leader. closing my election context... with Election Result{LeaderID{1}, ElectionID{80-1}}
+[[Node 6] election]: 2026/01/24 14:13:42 {186}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:13:57 {326}. Timeout occurred... Current state is Idle
+[[Node 6] election]: 2026/01/24 14:13:57 {326}. Awaiting election message...
+[[Node 6] election]: 2026/01/24 14:14:11 {475}. Timeout occurred... Current state is Idle
+[[Node 6] election]: 2026/01/24 14:14:11 {475}. Awaiting election message...

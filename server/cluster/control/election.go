@@ -3,13 +3,19 @@ package control
 import (
 	"fmt"
 	"server/cluster/election"
-	election_definitions "server/cluster/election/definitions"
 	"server/cluster/network"
 	"server/cluster/node"
+	"server/cluster/node/protocol"
 	"server/cluster/topology"
 	"strconv"
 )
 
+//===================================================//
+// Control plane - Election, tree and timeout logic  //
+//===================================================//
+
+// startElection starts a new election, it prepares the node for e new election, and then
+// sends a "START" to each ON neighbor. Then it instantly performs the YO-DOWN on the first round.
 func (c *ControlPlaneManager) startElection() {
 	c.logfElection("Preparing election context...")
 	electionID := c.ElectionSetup()
@@ -26,10 +32,11 @@ func (c *ControlPlaneManager) startElection() {
 
 	c.logfElection("Sent START to all my ON neighbors, waiting confirm or earlier election proposal")
 	c.electionCtx.SetStartReceived()
-	c.enterYoDown()
+	c.enterYoDown() // Performs yo down
 }
 
-func (c *ControlPlaneManager) endElection(leaderId node.NodeId, electionId election_definitions.ElectionId) {
+// endElection ends the current election, it creates a new runtime context, saving the election result there.
+func (c *ControlPlaneManager) endElection(leaderId node.NodeId, electionId election.ElectionId) {
 
 	newRuntime := NewRuntimeContext()
 	newRuntime.SetLastElection(election.NewElectionResult(leaderId, electionId))
@@ -42,44 +49,100 @@ func (c *ControlPlaneManager) endElection(leaderId node.NodeId, electionId elect
 
 	c.updateRuntime(newRuntime)
 }
+
+// ElectionSetup sets the node up to propose an election. It generates an election ID and returns it
+func (c *ControlPlaneManager) ElectionSetup() election.ElectionId {
+	id := c.GenerateElectionId()
+	c.ElectionSetupWithID(id)
+	return id
+}
+
+// ElectionsSetupWithId sets the node up based on an given election ID
+func (c *ControlPlaneManager) ElectionSetupWithID(id election.ElectionId) {
+	c.logfElection("Resetting the election context...")
+	c.electionCtx.Reset(c.IncrementClock())
+	c.SetElectionId(id)
+
+	c.treeMan.Reset() // After this election we need to build a new spanning tree
+
+	// We can skip the ID exchange thanks to the topology creation
+	// Orienting links based on id difference
+	c.logfElection("Orienting the nodes with current neighbors")
+	myId := c.GetId()
+	var neighborId node.NodeId
+	for _, neighborId = range c.topologyMan.NeighborList() { // Iterating over every on neighbor
+		if c.IsAlive(neighborId) {
+			if myId < neighborId {
+				c.electionCtx.Add(neighborId, election.Outgoing)
+				c.logfElection("%d: Outgoing", neighborId)
+			} else {
+				c.electionCtx.Add(neighborId, election.Incoming)
+				c.logfElection("%d: Incoming", neighborId)
+			}
+		} else {
+			c.logfElection("%d: Off", neighborId)
+		}
+	}
+
+	c.electionCtx.UpdateStatus() // Calculate election status (source, sink, internal, loser, winner)
+	c.logfElection("Calculating election %v status: I am %v", id, c.GetElectionStatus().String())
+
+	c.electionCtx.FirstRound()
+}
+
+// enterYoDown performs the Yo- phase of the Yo-Yo algorithm.
+// Bases on the node's role, the following happens:
+//   - Source: They send their ID to each outgoing link
+//   - Internal node: Nothing, they have to wait for all sources to send their ID
+//   - Sink: Nothing, they have to wait for all the internal nodes to send their ID
+//
+// Also:
+//   - Winner: Since he won th election, he starts the shout to broadcast it (and start building the SPT)
+//   - Loser: He lost the election, knows it, goes back to idle and waits
 func (c *ControlPlaneManager) enterYoDown() {
 
 	c.logfElection("Yo down started for round %d", c.GetCurrentRoundNumber())
 	switch c.GetElectionStatus() {
 
-	case election_definitions.Winner:
+	case election.Winner:
 		c.logfElection("I won the election, sending my ID to others")
 		c.startShout()
-		c.SwitchToElectionState(election_definitions.Idle)
-	case election_definitions.Loser:
+		c.SwitchToElectionState(election.Idle)
+	case election.Loser:
 		c.logfElection("I lost the election")
-		c.SwitchToElectionState(election_definitions.Idle)
+		c.SwitchToElectionState(election.Idle)
 
-	case election_definitions.Source:
+	case election.Source:
 		c.logfElection("Source: Sending my id to out nodes...")
 		for _, outNode := range c.electionCtx.OutNodes() {
 			c.SendMessageTo(outNode, c.newProposalMessage(outNode, c.GetId()))
 			c.logfElection("Sent to %d", outNode)
 		}
-		c.SwitchToElectionState(election_definitions.WaitingYoUp)
+		c.SwitchToElectionState(election.WaitingYoUp)
 
-	case election_definitions.InternalNode:
+	case election.InternalNode:
 		c.logfElection("Internal node: waiting for inlinks to send proposals")
-		c.SwitchToElectionState(election_definitions.WaitingYoDown)
-	case election_definitions.Sink:
+		c.SwitchToElectionState(election.WaitingYoDown)
+	case election.Sink:
 		c.logfElection("Sink: waiting for inlinks to send proposals")
-		c.SwitchToElectionState(election_definitions.WaitingYoDown)
+		c.SwitchToElectionState(election.WaitingYoDown)
 	}
 }
+
+// enterYoUp performs the -Yo phase of the Yo-Yo algorithm.
+// Bases on the node's role, the following happens:
+//   - Source: Nothing, they have to wait for all internal nodes to send their votes
+//   - Internal node: Nothing, they have to wait for all sinks to send their votes
+//   - Sink: They send the votes based on the proposals, to thei incoming links
 func (c *ControlPlaneManager) enterYoUp() {
 
 	c.logfElection("Yo up started for round %d", c.GetCurrentRoundNumber())
 	switch c.GetElectionStatus() {
-	case election_definitions.Sink:
+	case election.Sink:
 		c.logfElection("SINK: Got all the proposals, need to send votes back")
 		// If im here i got all proposals, i need to check for pruning
 		pruneMe := false
-		if c.electionCtx.InNodesCount() == 1 {
+		if c.electionCtx.InNodesCount() == 1 { // Pruning condition 1 for sinks: single parent, their vote is useless
 			c.logfElection("I have a single parent, need pruning")
 			pruneMe = true
 
@@ -91,6 +154,8 @@ func (c *ControlPlaneManager) enterYoUp() {
 				c.electionCtx.PruneThisRound(inNode)
 			}
 		} else {
+
+			// Pruning condition 2 for sinks: all parents send the same ID, they all come from the same source/internal, prune all but one
 			pruneMe = true
 			reference := c.electionCtx.GetSmallestId()
 			for _, proposed := range c.electionCtx.GetAllProposals() {
@@ -101,11 +166,13 @@ func (c *ControlPlaneManager) enterYoUp() {
 			}
 			c.logfElection("I have multiple parents, do i need pruning? %v", pruneMe)
 
+			// First we send the prune = false message, either way, even if pruneMe is true, at least one needs to remain
 			inNodes := c.electionCtx.InNodes()
 			vote, _ := c.electionCtx.DetermineVote(inNodes[0])
 			c.SendMessageTo(inNodes[0], c.newVoteMessage(inNodes[0], vote, false))
 			c.logfElection("Sent vote %v to %d", vote, inNodes[0])
 
+			// For the remaining innodes, we send pruneMe, either true or false
 			for _, inNode := range inNodes[1:] {
 				vote, _ := c.electionCtx.DetermineVote(inNode)
 				c.SendMessageTo(inNode, c.newVoteMessage(inNode, vote, pruneMe))
@@ -117,74 +184,37 @@ func (c *ControlPlaneManager) enterYoUp() {
 		}
 
 		c.NextElectionRound()
-		c.SwitchToElectionState(election_definitions.WaitingYoDown)
+		c.SwitchToElectionState(election.WaitingYoDown)
 
-	case election_definitions.InternalNode:
+	case election.InternalNode:
 		c.logfElection("Internal node: waiting for outlinks to send votes")
-		c.SwitchToElectionState(election_definitions.WaitingYoUp)
+		c.SwitchToElectionState(election.WaitingYoUp)
 
-	case election_definitions.Source:
+	case election.Source:
 		// Shouldn't be possible but anyways it would be
 		c.logfElection("Source: waiting for outlinks to send votes")
-		c.SwitchToElectionState(election_definitions.WaitingYoUp)
+		c.SwitchToElectionState(election.WaitingYoUp)
 	}
 }
 
-func (c *ControlPlaneManager) ElectionSetup() election_definitions.ElectionId {
-	id := c.GenerateElectionId()
-	c.ElectionSetupWithID(id)
-	return id
-}
-
-func (c *ControlPlaneManager) ElectionSetupWithID(id election_definitions.ElectionId) {
-	c.logfElection("Resetting the election context...")
-	c.electionCtx.Reset(c.IncrementClock())
-	c.SetElectionId(id)
-
-	c.treeMan.Reset() // After this election we need to build a new spanning tree
-
-	// We can skip the ID exchange thanks to the topology creation
-
-	c.logfElection("Orienting the nodes with current neighbors")
-	myId := c.GetId()
-	var neighborId node.NodeId
-	for _, neighborId = range c.topologyMan.NeighborList() {
-		if c.IsAlive(neighborId) {
-			if myId < neighborId {
-				c.electionCtx.Add(neighborId, election_definitions.Outgoing)
-				c.logfElection("%d: Outgoing", neighborId)
-			} else {
-				c.electionCtx.Add(neighborId, election_definitions.Incoming)
-				c.logfElection("%d: Incoming", neighborId)
-			}
-		} else {
-			c.logfElection("%d: Off", neighborId)
-		}
-	}
-
-	c.electionCtx.UpdateStatus()
-	c.logfElection("Calculating election %v status: I am %v", id, c.GetElectionStatus().String())
-
-	c.electionCtx.FirstRound()
-}
-
-func (c *ControlPlaneManager) handleIdleState(message *election_definitions.ElectionMessage) {
+// handleIdleState handles the reception of election messages during the Idle phase of the algorithm
+func (c *ControlPlaneManager) handleIdleState(message *protocol.ElectionMessage) {
 
 	lastResult := c.runtimeCtx.Load().GetLastElection()
 	switch message.MessageType {
 
-	case election_definitions.Start: // A node sent START because a neighbor received JOIN or START
+	case protocol.Start: // A node sent START because a neighbor received JOIN or START
 
-		if lastResult != nil {
+		if lastResult != nil { // It must be a new neighbor if an election already concluded
 
 			electionId := lastResult.GetElectionID()
-			receivedId := election_definitions.ElectionId(message.Body[0]) // A start message has the electionId proposal in the body
+			receivedId := election.ElectionId(message.Body[0]) // A start message has the electionId proposal in the body
 
 			cmp := electionId.Compare(receivedId)
 
-			if cmp == 0 {
+			if cmp == 0 { // It is for the current election, try to notify it of current leader and ask it to be my tree child
 				senderId, _ := ExtractIdentifier(message.Header.Sender)
-				c.treeMan.SwitchToState(topology.TreeActive) // forse
+				c.treeMan.SwitchToState(topology.TreeActive)
 				c.SendCurrentLeader(senderId)
 				return
 			}
@@ -197,7 +227,7 @@ func (c *ControlPlaneManager) handleIdleState(message *election_definitions.Elec
 		// Either the first election or a newer and stronger one, follow it
 		c.handleStartMessage(message)
 
-	case election_definitions.Leader:
+	case protocol.Leader:
 		if lastResult != nil {
 			electionId := lastResult.GetElectionID()
 			receivedId := message.ElectionId
@@ -211,21 +241,22 @@ func (c *ControlPlaneManager) handleIdleState(message *election_definitions.Elec
 		// Either the first election of a newer one, forwarding it
 		c.handleLeaderMessage(message)
 
-	case election_definitions.Proposal, election_definitions.Vote:
+	case protocol.Proposal, protocol.Vote:
 		if lastResult != nil {
 			cmp := lastResult.GetElectionID().Compare(message.ElectionId)
 			if cmp > 0 {
 				c.logfElection("Received a proposal/vote for an older election, ignoring")
 				return
 			}
-			if cmp == 0 {
+			if cmp == 0 { // This node is still voting/proposing for this election, we need to notify about the conclusion
 				senderId, _ := ExtractIdentifier(message.Header.Sender)
-				c.treeMan.SwitchToState(topology.TreeActive) // forse
+				c.treeMan.SwitchToState(topology.TreeActive)
 				c.SendCurrentLeader(senderId)
 				return
 			}
 		}
-		// Either the first election or someone sent me a proposal for the current/newer election, try  to start another
+		// Either the first election or someone sent me a proposal for the current/newer election
+		// We could be a 'slower' node and didn't receive the start yet, but we can try to get ahead and still partecipate
 		cmp := message.ElectionId.Compare(c.electionCtx.GetId())
 		if cmp >= 0 {
 			if cmp > 0 && !c.HasReceivedElectionStart() {
@@ -233,7 +264,7 @@ func (c *ControlPlaneManager) handleIdleState(message *election_definitions.Elec
 				c.handleWaitingYoDown(message)
 				c.enterYoDown()
 			}
-			if message.MessageType == election_definitions.Proposal {
+			if message.MessageType == protocol.Proposal {
 				c.handleWaitingYoDown(message)
 			} else {
 				c.handleWaitingYoUp(message)
@@ -243,11 +274,15 @@ func (c *ControlPlaneManager) handleIdleState(message *election_definitions.Elec
 	}
 }
 
-func (c *ControlPlaneManager) handleWaitingYoDown(message *election_definitions.ElectionMessage) {
+// handleWaitingYoDown manages the waiting phase of Sinks and Internal Nodes during Yo-
+// Generally the compare the election id with the current one. An older is ignored, a new one makes us switch to that one and
+// a proposal for the current one has to be handled carefully:
+// If the round is older  than the current, we ignore, if it's greater we stash it and if it's the correct one, we process it
+func (c *ControlPlaneManager) handleWaitingYoDown(message *protocol.ElectionMessage) {
 
 	h := message.GetHeader()
 	switch message.MessageType {
-	case election_definitions.Proposal:
+	case protocol.Proposal:
 		sender, _ := ExtractIdentifier(h.Sender)
 		proposed, _ := strconv.Atoi(message.Body[0])
 
@@ -282,13 +317,13 @@ func (c *ControlPlaneManager) handleWaitingYoDown(message *election_definitions.
 			return
 		} else if message.Round > currentRound {
 			c.logfElection("This message is for a future round (%d > %d), stashing it", message.Round, currentRound)
-			c.electionCtx.StashFutureProposal(sender, node.NodeId(proposed), message.Round)
+			c.StashFutureElectionProposal(sender, node.NodeId(proposed), message.Round)
 			return
 		}
 
 		switch c.GetElectionStatus() {
 
-		case election_definitions.InternalNode: // We need to gather all proposal from in neighbors, since we already received a message, update the round context
+		case election.InternalNode: // We need to gather all proposal from in neighbors, since we already received a message, update the round context
 			c.electionCtx.StoreProposal(sender, node.NodeId(proposed))
 			c.logfElection("Stored the proposal of %d by %d, waiting for %d more proposals...", proposed, sender, c.electionCtx.GetAwaitedProposals())
 
@@ -305,7 +340,7 @@ func (c *ControlPlaneManager) handleWaitingYoDown(message *election_definitions.
 				c.logfElection("Forwarding proposal to %d", outNode)
 			}
 
-		case election_definitions.Sink:
+		case election.Sink:
 			c.electionCtx.StoreProposal(sender, node.NodeId(proposed))
 			c.logfElection("Stored the proposal of %d by %d, waiting for %d more votes...", proposed, sender, c.electionCtx.GetAwaitedProposals())
 
@@ -314,15 +349,15 @@ func (c *ControlPlaneManager) handleWaitingYoDown(message *election_definitions.
 			}
 			c.logfElection("Got all proposals, calculating the smallest ID... {%d}", c.electionCtx.GetSmallestId())
 
-		case election_definitions.Source:
+		case election.Source:
 			// Nothing, sources don't wait on YoDown
 		}
 
 		c.enterYoUp()
-	case election_definitions.Leader:
+	case protocol.Leader:
 		c.handleLeaderMessage(message)
 
-	case election_definitions.Start:
+	case protocol.Start:
 		c.handleStartMessage(message)
 
 	default:
@@ -330,12 +365,16 @@ func (c *ControlPlaneManager) handleWaitingYoDown(message *election_definitions.
 	}
 }
 
-func (c *ControlPlaneManager) handleWaitingYoUp(message *election_definitions.ElectionMessage) {
+// handleWaitingYoUp manages the waiting phase of Sources and Internal Nodes during -Yo
+// Generally the compare the election id with the current one. An older is ignored, a new one makes us switch to that one and
+// a vote for the current one has to be handled carefully:
+// If the round is older  than the current, we ignore, if it's greater we stash it and if it's the correct one, we process it
+func (c *ControlPlaneManager) handleWaitingYoUp(message *protocol.ElectionMessage) {
 	h := message.GetHeader()
 
 	switch message.MessageType {
 
-	case election_definitions.Vote:
+	case protocol.Vote:
 		sender, _ := ExtractIdentifier(h.Sender)
 		vote, _ := strconv.ParseBool(message.Body[0])
 		pruneChild, _ := strconv.ParseBool(message.Body[1])
@@ -371,13 +410,13 @@ func (c *ControlPlaneManager) handleWaitingYoUp(message *election_definitions.El
 			return
 		} else if message.Round > currentRound {
 			c.logfElection("This message is for a future round (%d > %d), stashing it", message.Round, currentRound)
-			c.electionCtx.StashFutureVote(sender, vote, message.Round)
+			c.StashFutureElectionVote(sender, vote, message.Round)
 			return
 		}
 
 		switch c.electionCtx.GetStatus() {
 
-		case election_definitions.InternalNode: // We need to gather all votes from out neighbors, since we already received a message, update the round context
+		case election.InternalNode: // We need to gather all votes from out neighbors, since we already received a message, update the round context
 			c.logfElection("Stored the vote of %v by %d, waiting for %d more vote...  Pruning asked: %v", vote, sender, c.electionCtx.GetAwaitedVotes(), pruneChild)
 			c.electionCtx.StoreVote(sender, vote)
 			if pruneChild {
@@ -415,7 +454,7 @@ func (c *ControlPlaneManager) handleWaitingYoUp(message *election_definitions.El
 			c.NextElectionRound()
 			c.enterYoDown()
 
-		case election_definitions.Source:
+		case election.Source:
 			c.logfElection("Stored the vote of %v by %d, waiting for %d more votes...  Pruning asked: %v", vote, sender, c.electionCtx.GetAwaitedVotes(), pruneChild)
 			c.electionCtx.StoreVote(sender, vote)
 			if pruneChild {
@@ -429,34 +468,36 @@ func (c *ControlPlaneManager) handleWaitingYoUp(message *election_definitions.El
 			c.NextElectionRound()
 			c.enterYoDown()
 
-		case election_definitions.Sink:
+		case election.Sink:
 			// Nothing, sinks don't wait on YoUP
 		}
 
-	case election_definitions.Start:
+	case protocol.Start:
 		c.handleStartMessage(message)
 
-	case election_definitions.Leader:
+	case protocol.Leader:
 		c.handleLeaderMessage(message)
 	default:
 		c.logfElection("Received %v type during WaitingYoUp State, ignoring?", message.MessageType)
 	}
 }
 
-func (c *ControlPlaneManager) handleStartMessage(message *election_definitions.ElectionMessage) error {
+// handleStartMessage manages "START" messages in such a way that prevents the system to continuosly start one election after the other
+func (c *ControlPlaneManager) handleStartMessage(message *protocol.ElectionMessage) error {
 	h := message.GetHeader()
 	sender, _ := ExtractIdentifier(h.Sender)
-	electionId := election_definitions.ElectionId(message.Body[0])
+	electionId := election.ElectionId(message.Body[0])
 
 	localBestId := c.electionCtx.GetId()
 	myIdProposal := c.electionCtx.GetIdProposal()
 
+	// We follow the stronger election
 	if myIdProposal.Compare(localBestId) > 0 {
 		localBestId = myIdProposal
 	}
 
 	cmp := electionId.Compare(localBestId)
-	if cmp == 0 {
+	if cmp == 0 { // My own start means that everyone forwarded it without a stronger one popping out, meaning it's the strongest
 		if !c.HasReceivedElectionStart() {
 			c.logfElection("%d sent me my own start back. Considering it as (ACK)", sender)
 			c.SetElectionStartReceived()
@@ -468,6 +509,7 @@ func (c *ControlPlaneManager) handleStartMessage(message *election_definitions.E
 		return nil
 	}
 
+	// When we get a stronger election, we switch to that
 	c.logfElection("%d sent me a stronger START message: received{%s}, mine{%s}. Switching to this one", sender, electionId, localBestId)
 	c.SetElectionStartReceived()
 
@@ -475,6 +517,7 @@ func (c *ControlPlaneManager) handleStartMessage(message *election_definitions.E
 	c.ElectionSetupWithID(electionId)
 	c.logfElection("Finished setup for the election context")
 
+	// Notify the others with the stronger election
 	for _, neighbor := range c.NeighborList() {
 		if neighbor == sender {
 			c.logfElection("Ignoring %d as it is the sender", neighbor)
@@ -487,15 +530,20 @@ func (c *ControlPlaneManager) handleStartMessage(message *election_definitions.E
 	return nil
 }
 
-func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.ElectionMessage) error {
+// handleLeaderMessage handles the behaviour of the node when receiving a Leader message.
+// Ideally we need to check if it's for the correct election and, if so, partecipate in the shout
+func (c *ControlPlaneManager) handleLeaderMessage(message *protocol.ElectionMessage) error {
 
 	lastResult := c.runtimeCtx.Load().GetLastElection()
 	if lastResult != nil {
+
+		// This could be a message that got stuck on a slow network route
 		if message.ElectionId.Compare(lastResult.GetElectionID()) < 0 {
 			c.logfElection("Someone, %s, sent me a LEADER message for an older election: %s", message.Header.Sender, message.ElectionId)
 			return nil
 		}
 	}
+	// Last result is nil, this is the first leader message
 
 	currentId := c.electionCtx.GetId()
 	receivedId := message.ElectionId
@@ -510,12 +558,14 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 		c.logfElection("Received a leader message, by %d, for an older election (mine: %s, received: %s) Ignoring.", sender, currentId, receivedId)
 		return nil
 	case cmp == 0:
+
+		// A message for the correct election is considered also a valid message for the shout, so we check the SPT constructing state
 		c.logfTree("%d My state is %v.", sender, c.treeMan.GetState().String())
 
 		switch c.treeMan.GetState() {
-		case topology.TreeActive:
+		case topology.TreeActive: // Waiting for responses, I already have a parent
 
-			switch message.Body[1] {
+			switch message.Body[1] { // It's either Q or A
 			case "Q": // Q
 				c.logfTree("Received Q leader message from %d. Sending NO", sender)
 				leaderId, err := strconv.ParseUint(message.Body[0], 10, 64)
@@ -529,21 +579,23 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 					return err
 				}
 				neighborLen := c.topologyMan.Length()
+
+				// Response to Q, and positive
 				if yes {
 					c.treeMan.AddTreeNeighbor(sender)
-					c.logfTree("Received YES from %d, adding to tree neighbors. Current counter{%d}", sender, c.treeMan.GetCounter())
-				} else {
+					c.logfTree("Received YES from %d, adding to tree neighbors. Current counter{%d}", sender, c.treeMan.GetTreeNeighborCount())
+				} else { // Negative
 					c.treeMan.AcknowledgeNo(sender)
-					c.logfTree("Received NO from %d, just increasing counter {%d}", sender, c.treeMan.GetCounter())
+					c.logfTree("Received NO from %d, just increasing counter {%d}", sender, c.treeMan.GetTreeNeighborCount())
 				}
-				c.logfTree("Awaiting %d responses... %v", (c.treeMan.GetCounter())-neighborLen, c.NeighborList())
-				if c.treeMan.GetCounter() == neighborLen {
+				c.logfTree("Awaiting %d responses... %v", (c.treeMan.GetTreeNeighborCount())-neighborLen, c.NeighborList())
+				if c.treeMan.GetTreeNeighborCount() == neighborLen {
 					c.becomeTreeDone()
 				}
 			default:
 				return fmt.Errorf("Unkwown flag set in %v", message)
 			}
-		case topology.TreeDone:
+		case topology.TreeDone: // Even if done, some messages could arrive
 			if message.Body[1] == "Q" { // Q
 				c.logfTree("Received Q leader message while DONE from %d. My tree is already set, sending NO", sender)
 				leaderId, err := strconv.ParseUint(message.Body[0], 10, 64)
@@ -561,6 +613,8 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 		c.logfElection("Received a leader message, by %d, for a newer election (mine: %s, received: %s) Accepting this one.", sender, currentId, receivedId)
 	}
 
+	// Each time a stronger election arrives, we discard the previous one and we re-try to endElection with the new one, we don't stop until a stable situation, that is, the SPT constructed
+
 	leaderId, err := strconv.ParseUint(message.Body[0], 10, 64)
 	if err != nil {
 		return err
@@ -571,6 +625,7 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 
 	c.logfElection("%d said it was leader. closing my election context... with %v", leaderId, c.runtimeCtx.Load().lastElection.String())
 
+	// After end election, we are in TreeIdle, so we need to senq Q's to ALL, also, the sender that gave us the leader message is our parent
 	c.logfTree("Setting up spanning tree process, im IDLE and received a message")
 	c.treeMan.SetRoot(false)
 	c.treeMan.SetParent(sender, rootHopCount+1)
@@ -579,7 +634,7 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 	c.logfTree("Root{%v}, Parent{sender:%v}, TreeChildren{%v}", !hasParent, parent, children)
 
 	c.SendMessageTo(sender, c.newLeaderResponseMessage(sender, node.NodeId(leaderId), message.ElectionId, true))
-	counter := c.treeMan.GetCounter()
+	counter := c.treeMan.GetTreeNeighborCount()
 
 	c.logfTree("Sent yes to %d. Counter = %d", sender, counter)
 	if counter == c.topologyMan.Length() { // if 1 neighbor
@@ -587,7 +642,7 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 	} else {
 		c.logfTree("Other neighbors, sending Q's")
 		for _, neighbor := range c.NeighborList() {
-			if neighbor == sender { // || neighbor == node.NodeId(leaderId) {
+			if neighbor == sender {
 				continue
 			}
 
@@ -610,12 +665,20 @@ func (c *ControlPlaneManager) handleLeaderMessage(message *election_definitions.
 
 	return nil
 }
+
+// handleYoDownTimeout handles a timeout during the Yo- phase.
+// Since Sources don't wait on Yo-, the node that registered the timeout is either internal or sink.
+// They wait for proposals on their inlinks, so we need to check the status of each in link.
 func (c *ControlPlaneManager) handleYoDownTimeout() {
 
 	for _, node := range c.electionCtx.InNodes() {
 		_, err := c.electionCtx.RetrieveProposal(node)
-		if err != nil { // Not proposed, i could add a map [node]counter. Counting (or not counting ..ADFBHS) the timeouts, if you dont vote but you already game me 50 heartbeats... dude wake up
+		if err != nil {
+
+			// Not proposed
 			if !c.IsAlive(node) {
+
+				// And is off
 				c.logfElection("InNode %d is OFF. Restarting", node)
 				c.startElection()
 				return
@@ -631,12 +694,19 @@ func (c *ControlPlaneManager) handleYoDownTimeout() {
 	}
 }
 
+// handleYoUpTimeout handles a timeout during the -Yo phase.
+// Since Sinks don't wait on -Yo, the node that registered the timeout is either internal or source.
+// They wait for votes on their outlinks, so we need to check the status of each out link.
 func (c *ControlPlaneManager) handleYoUpTimeout() {
 
 	for _, node := range c.electionCtx.OutNodes() {
 		_, err := c.electionCtx.RetrieveVote(node)
 		if err != nil {
+
+			// Not voted
 			if !c.IsAlive(node) {
+
+				// And is off
 				c.logfElection("InNode %d is OFF. Restarting", node)
 				c.startElection()
 				return
@@ -652,15 +722,20 @@ func (c *ControlPlaneManager) handleYoUpTimeout() {
 	}
 }
 
+// handleIdleTimeout manages what happens when, inside the ElectionHandle, a 15 second timeout occurs without receiving messages.
+// It is normal to not have traffic sometimes, but we can use this occasion to check if the neighbors are still alive. Same goes for the
+// leader and tree neighbors (this is because Leader messages were user to build the SPT).
 func (c *ControlPlaneManager) handleIdleTimeout() {
 
 	lastElection := c.runtimeCtx.Load().GetLastElection()
 	if lastElection != nil {
+
 		leaderId := lastElection.GetLeaderID()
 		if c.GetId() != leaderId { // Check leader status only if not leader
 			c.logfHeartbeat("Am i neighbors with %d? %v", leaderId, c.IsNeighborsWith(leaderId))
 			if c.IsNeighborsWith(leaderId) && !c.IsAlive(leaderId) {
 
+				// Check the progress on leader timeouts, since the If condition was Neighbors with Leader and !Alive (= OFF)
 				leaderTimeouts := c.IncreaseLeaderTimeouts()
 				switch {
 				case leaderTimeouts < election.RejoinLeaderTimeout:
@@ -679,12 +754,15 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 			}
 		}
 
+		// Check SPT state
 		switch c.treeMan.GetState() {
 		case topology.TreeDone: // Tree was all set, monitoring neighbors
 			parent, children, hasParent := c.GetTreeNeighbors()
 
 			// What about children?
 			for child := range children {
+
+				// Increase timeout for OFF children
 				if !c.IsAlive(child) {
 					childTimeouts := c.treeMan.IncreaseTimeout(child)
 					switch {
@@ -693,13 +771,11 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 					case childTimeouts == topology.TolerableTreeNeighborTimeouts:
 						c.logfTree("Child(%d) has been OFF for some time (%d timeouts). Removing", child, childTimeouts)
 						c.RemoveTreeNeighbor(child) // Or better child death handling
-						if c.GetId() == leaderId && c.treeMan.GetCounter() == 0 {
-							c.becomeTreeDone()
-						}
 					}
 				}
 			}
 
+			// What about parent now?
 			if hasParent && !c.IsAlive(parent) { // Non root, the only one to handle parent's deaths
 
 				parentTimeouts := c.treeMan.IncreaseTimeout(parent)
@@ -711,6 +787,7 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 					c.RemoveTreeNeighbor(parent)
 					c.RemoveTreeParent()
 
+					// Sending an HELP NO PARENT request to all topology neighbors that are ON and not children in the tree
 					neighbors := c.NeighborList()
 					for _, neighbor := range neighbors {
 						if _, ok := children[neighbor]; ok || !c.IsAlive(neighbor) {
@@ -722,23 +799,23 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 				}
 			}
 
-		case topology.TreeActive:
+		case topology.TreeActive: // Waiting for response on some tree neighbor
 			neighbors := c.NeighborList()
 			for _, neighbor := range neighbors {
-				if !c.treeMan.HasAnswered(neighbor) && !c.IsAlive(neighbor) {
+				if !c.treeMan.HasAnswered(neighbor) && !c.IsAlive(neighbor) { // Check which one has not answered and is off, and increase its timeouts
 					childTimeouts := c.treeMan.IncreaseTimeout(neighbor)
 					c.logfTree("Neighbor(%d) did not answer the SHOUT for (%d) timeouts and is off...", neighbor, childTimeouts)
 					if childTimeouts == 5 {
 						c.logfTree("Neighbor(%d) did not answer the SHOUT and has been off for too much time. Considering NO", neighbor)
 						c.treeMan.AcknowledgeNo(neighbor)
-						if c.treeMan.GetCounter() == len(neighbors) {
+						if c.treeMan.GetTreeNeighborCount() == len(neighbors) {
 							c.becomeTreeDone()
 						}
 					}
 				}
 			}
 		}
-	} else { // postCtx is nil, we are idle, so no election has been performed yet
+	} else { // If the last election is nil it means we did not participate in any election yes, just checking for neighbors.
 		onNeighbors := 0
 		for _, node := range c.topologyMan.NeighborList() {
 			if c.IsAlive(node) {
@@ -748,6 +825,8 @@ func (c *ControlPlaneManager) handleIdleTimeout() {
 		if onNeighbors > 0 {
 			return
 		}
+
+		// If I am with no neighbors on, for this much time, without any election, I probably am alone, so I start an election by miself to instanly become leader
 		c.electionCtx.IncreaseTimeout(c.GetId()) // My own timeouts, to understand how many times i had a timeout by myself
 		if t, _ := c.electionCtx.GetTimeout(c.GetId()); t == 5 {
 			c.electionCtx.ResetTimeouts(c.GetId())

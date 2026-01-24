@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"server/cluster/nlog"
+	"server/cluster/node/protocol"
 	"server/internal/data"
 	"server/internal/entity"
 	"server/internal/repository"
@@ -11,15 +12,18 @@ import (
 	"github.com/google/uuid"
 )
 
+// Service used to handle users
 type UserService interface {
-	GetUserByNameTag(name, tag string, lastEpoch uint64) (*entity.User, uint64, error)
-	GetUsersByName(name string, lastEpoch uint64) ([]*entity.User, uint64, error)
-	DeleteUser(uuid string, lastEpoch uint64) (uint64, error)
+	GetUserByNameTag(name, tag string, lastEpoch uint64) (*entity.User, uint64, error) // Returns the user entity with the given name and tag
+	GetUsersByName(name string, lastEpoch uint64) ([]*entity.User, uint64, error)      // Returns all the users that match the given name.
+	DeleteUser(uuid string, lastEpoch uint64) (uint64, error)                          // Deletes the user with the given uuid.
 }
 
+// Proxy is the implementation of the service on the input nodes.
+// Since they hold no database, they can only forward the request towards a node that can handle it.
 type proxyUserService struct {
-	forwarder data.Forwarder
-	logger    nlog.Logger
+	forwarder data.Forwarder // Forwards the requests and returns the responses
+	logger    nlog.Logger    // Logs a format string
 }
 
 func NewProxyUserService(forwarder data.Forwarder, logger nlog.Logger) UserService {
@@ -43,12 +47,12 @@ func (p *proxyUserService) GetUserByNameTag(name, tag string, lastEpoch uint64) 
 		return nil, 0, err
 	}
 
-	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), data.ActionUserGetNameTag, lastEpoch, payload)
+	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), protocol.ActionUserGetNameTag, lastEpoch, payload)
 	if err != nil {
 		p.Logf("Received error on request execution {%v}", err)
 		return nil, 0, err
 	}
-	if response.Status != data.SUCCESS {
+	if response.Status != protocol.SUCCESS {
 		s := fmt.Errorf("User was not found. %v", response.ErrorMessage)
 		p.Logf("%v", s.Error())
 		return nil, 0, s
@@ -67,12 +71,12 @@ func (p *proxyUserService) GetUsersByName(name string, lastEpoch uint64) ([]*ent
 	p.Logf("Forwarding the request")
 	payload := []byte(name)
 
-	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), data.ActionUsersGetName, lastEpoch, payload)
+	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), protocol.ActionUsersGetName, lastEpoch, payload)
 	if err != nil {
 		p.Logf("Received error on request execution {%v}", err)
 		return nil, 0, err
 	}
-	if response.Status != data.SUCCESS {
+	if response.Status != protocol.SUCCESS {
 		s := fmt.Errorf("User was not found. %v", response.ErrorMessage)
 		p.Logf("%v", s.Error())
 		return nil, 0, s
@@ -91,33 +95,34 @@ func (p *proxyUserService) DeleteUser(userUuid string, lastEpoch uint64) (uint64
 	p.Logf("Forwarding the request")
 	payload := []byte(userUuid)
 
-	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), data.ActionUserDelete, lastEpoch, payload)
+	response, err := p.forwarder.ExecuteRemote(uuid.New().String(), protocol.ActionUserDelete, lastEpoch, payload)
 	if err != nil {
 		p.Logf("Received error on request execution {%v}", err)
 		return 0, err
 	}
-	if response.Status != data.SUCCESS {
+	if response.Status != protocol.SUCCESS {
 		s := fmt.Errorf("User was not deleted. %v", response.ErrorMessage)
 		p.Logf("%v", s.Error())
 		return 0, s
 	}
 
-	p.Logf("User retrieved correctly")
+	p.Logf("User deleted correctly")
 	return response.Epoch, nil
 }
 
+// Local service is the implementation of the service on the persistence nodes.
+// If the service is WRITE-ENABLED, he can write to the database.
+// Otherwise, it can only read from it's replica, only if it's up to date (this endpoins is reachable only if write-enabled).
 type localUserService struct {
-	canWrite         bool
-	forwarder        data.Forwarder
-	logger           nlog.Logger
-	userRepository   repository.UserRepository
-	globalRepository repository.GlobalRepository
+	canWrite         bool                        // Is this service node write enables?
+	logger           nlog.Logger                 // Logs a format string
+	userRepository   repository.UserRepository   // Repository for users
+	globalRepository repository.GlobalRepository // Repository for a global stsate
 }
 
-func NewLocalUserService(canWrite bool, userRepo repository.UserRepository, globalRepo repository.GlobalRepository, forwarder data.Forwarder, logger nlog.Logger) UserService {
+func NewLocalUserService(canWrite bool, userRepo repository.UserRepository, globalRepo repository.GlobalRepository, logger nlog.Logger) UserService {
 	return &localUserService{
 		canWrite:         canWrite,
-		forwarder:        forwarder,
 		logger:           logger,
 		globalRepository: globalRepo,
 		userRepository:   userRepo,

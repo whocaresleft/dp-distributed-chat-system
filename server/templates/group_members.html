@@ -1,0 +1,92 @@
+{{template "base" .}}
+
+{{ define "refresher" }}
+{{ end }}
+
+{{ define "content" }}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <a href="/groups/{{ .Group.UUID | urlquery }}/chat">Chat</a>
+    </ol>
+  </nav>
+
+  <h3>Members of {{ .Group.Name }}</h3>
+
+  <div class="card p-3 mb-4">
+    <form action="/groups/{{ .Group.UUID | urlquery }}/members" method="POST" class="d-flex gap-2">
+      <input type="text" name="username" class="form-control" placeholder="Enter username" required>
+      <input type="text" name="tag" pattern="[0-9]{3,6}" class="form-control" placeholder="Enter user tag (3-6 number sequence)" required>
+      <button type="submit" class="btn btn-success">Add Member</button>
+    </form>
+  </div>
+
+  <div class="list-group">
+    {{ range .Members }}
+    <div class="list-group-item d-flex justify-content-between align-items-center bg-dark text-light border-secondary">
+      <div>
+        <a href="/users/{{ .Username | urlquery }}/{{ .Tag | urlquery }}"><strong>{{ .Username }}</strong><span>#{{ .Tag }}</span></a>
+      </div>
+      <button type="button" class="btn btn-delete-member" class="btn" style="background: var(--danger); border: none; cursor: pointer;" data-user-uuid="{{ .UUID }}">
+        Remove
+      </button>
+    </div>
+    {{ end }}
+  </div>
+  <button type="button" id="delete-group" class="btn btn-primary" style="background: var(--danger); border: none; cursor: pointer;">
+    Delete Group
+  </button>
+</div>
+{{ end }}
+
+{{define "scripts"}}
+<script>
+  const membersContainer = document.querySelector('.list-group');
+  if (membersContainer) {
+    membersContainer.addEventListener('click', async (e) => {
+      if (e.target.classList.contains('btn-delete-member')) {
+        const userUUID = e.target.getAttribute('data-user-uuid');
+        const groupUUID = "{{ $.Group.UUID }}";
+        if (!confirm("Remove this user from the group?")) return;
+        try {
+          const response = await fetch(`/groups/${groupUUID}/members/${userUUID}`, {
+            method: 'DELETE'
+          });
+          if (response.ok) {
+            e.target.closest('.list-group-item').remove();
+          } else {
+            console.error("Failed to remove member.");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      }
+    });
+  }
+
+  const deleteBtn = document.getElementById('delete-group');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      const groupUUID = "{{ $.Group.UUID }}";
+      //const uuid = document.getElementById('group-uuid').textContent;
+      if (!confirm("Are you sure you want to delete this group? This action cannot be undone.")) {
+        return;
+      }
+      try {
+        const response = await fetch(`/groups/${groupUUID}`, {
+          method: 'DELETE',
+        });
+        if (response.ok) {
+          window.location.href = '/groups';
+        } else {
+          const errorText = await response.text();
+          document.getElementById('error-message').textContent = "Error: " + errorText;
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('error-message').textContent = 'An error occurred. Please try again later.';
+      }
+    });
+  }
+</script>
+{{end}}

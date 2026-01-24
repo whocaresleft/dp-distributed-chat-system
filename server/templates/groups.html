@@ -1,0 +1,49 @@
+{{ template "base" . }}
+
+{{ define "refresher" }}
+{{ end }}
+
+{{ define "content" }}
+<div class="container py-4">
+  <div class="search-results-container" style="max-width: 800px; margin: 0 auto;">
+
+    <div class="card p-4 mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+      <h5 class="text-light mb-3">Search Groups</h5>
+      <form action="/groups" method="GET" class="d-flex gap-2">
+        <input type="text" name="q" class="form-control bg-dark text-light border-secondary" placeholder="Search by group name..." value="{{ .Query }}">
+        <button type="submit" class="btn btn-outline-primary">Search</button>
+      </form>
+    </div>
+
+    <div class="card p-4 mb-4" style="background: #1a1a1a; border: 1px solid #333;">
+      <h5 class="text-light mb-3">Or Create a New One</h5>
+      <form action="/groups" method="POST" class="d-flex gap-2">
+        <input type="text" name="name" class="form-control bg-dark text-light border-secondary" placeholder="New group name..." required>
+        <button type="submit" class="btn btn-primary">Create</button>
+      </form>
+    </div>
+
+    <hr style="border-color: #333;">
+
+    <h4 class="text-light mb-3">{{ if .Query }}Search Results{{ else }}Your Groups{{ end }}</h4>
+    <div class="list-group">
+      {{ range .Groups }}
+      <div class="card mb-2" style="background: #222; border: 1px solid #444;">
+        <a href="/groups/{{ .UUID }}" class="d-flex justify-content-between align-items-center p-3 text-decoration-none">
+          <div>
+            <strong style="color: var(--primary);">{{ .Name }}</strong>
+            <div class="small text-muted">UUID: {{ .UUID | printf "%.8s" }}...</div>
+          </div>
+          <div class="text-end">
+            <span class="badge bg-dark border border-secondary text-secondary">Epoch: {{ .Epoch }}</span>
+            <span class="ms-2" style="color: var(--primary);">Open &rarr;</span>
+          </div>
+        </a>
+      </div>
+      {{ else }}
+      <p class="text-center text-muted mt-4">No groups found.</p>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}

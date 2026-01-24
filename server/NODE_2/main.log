@@ -1,0 +1,265 @@
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Configuration component correctly created: Id{2}, Ports{Control: 46002, Data: 50002}
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Created context
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Node is all set
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Neighbors recovered: map[1:host:"172.21.196.252"  port:46001 3:host:"172.21.196.252"  port:46003 5:host:"172.21.196.252"  port:46005]
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Node booting up...
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Node's goroutine started correctly
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Started output dispatcher. Awaiting messages to send...
+[[Node 2] main]: 2026/01/24 14:13:39 {0}. Started input dispatcher. Awaiting messages...
+[[Node 2] main]: 2026/01/24 14:13:39 {2}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Topology}, Timestamp{1}
+[[Node 2] main]: 2026/01/24 14:13:39 {3}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Topology}, Timestamp{2}
+[[Node 2] main]: 2026/01/24 14:13:39 {3}. Sending JOIN to 3...
+[[Node 2] main]: 2026/01/24 14:13:39 {4}. Sending JOIN to 5...
+[[Node 2] main]: 2026/01/24 14:13:39 {4}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Topology}, Timestamp{4}}, Address{{172.21.196.252 46002}}, Flags{1}
+[[Node 2] main]: 2026/01/24 14:13:39 {5}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Topology}, Timestamp{5}}, Address{{172.21.196.252 46002}}, Flags{1}
+[[Node 2] main]: 2026/01/24 14:13:39 {5}. Sending JOIN to 1...
+[[Node 2] main]: 2026/01/24 14:13:39 {6}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{6}}, Address{{172.21.196.252 46002}}, Flags{1}
+[[Node 2] main]: 2026/01/24 14:13:39 {8}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Topology}, Timestamp{7}
+[[Node 2] main]: 2026/01/24 14:13:39 {14}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Topology}, Timestamp{13}
+[[Node 2] main]: 2026/01/24 14:13:39 {15}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Topology}, Timestamp{15}}, Address{{172.21.196.252 46002}}, Flags{3}
+[[Node 2] main]: 2026/01/24 14:13:39 {16}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Topology}, Timestamp{16}}, Address{{172.21.196.252 46002}}, Flags{3}
+[[Node 2] main]: 2026/01/24 14:13:39 {17}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Topology}, Timestamp{17}}, Address{{172.21.196.252 46002}}, Flags{2}
+[[Node 2] main]: 2026/01/24 14:13:39 {18}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Topology}, Timestamp{18}}, Address{{172.21.196.252 46002}}, Flags{2}
+[[Node 2] main]: 2026/01/24 14:13:39 {20}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Topology}, Timestamp{19}
+[[Node 2] main]: 2026/01/24 14:13:39 {23}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Topology}, Timestamp{22}
+[[Node 2] main]: 2026/01/24 14:13:39 {24}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{23}
+[[Node 2] main]: 2026/01/24 14:13:39 {29}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{29}}, MessageType{0}, ElectionID{}, Round{0}, Body{[25-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {30}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{30}}, MessageType{0}, ElectionID{}, Round{0}, Body{[25-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {31}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{31}}, MessageType{1}, ElectionID{25-2}, Round{0}, Body{[2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {32}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{32}}, MessageType{1}, ElectionID{25-2}, Round{0}, Body{[2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {33}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{33}}, MessageType{0}, ElectionID{}, Round{0}, Body{[27-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {34}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{34}}, MessageType{0}, ElectionID{}, Round{0}, Body{[27-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {35}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{35}}, MessageType{1}, ElectionID{27-2}, Round{0}, Body{[2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {36}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{36}}, MessageType{1}, ElectionID{27-2}, Round{0}, Body{[2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {37}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{36}
+[[Node 2] main]: 2026/01/24 14:13:39 {38}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Topology}, Timestamp{14}
+[[Node 2] main]: 2026/01/24 14:13:39 {39}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{39}}, Address{{172.21.196.252 46002}}, Flags{3}
+[[Node 2] main]: 2026/01/24 14:13:39 {39}. 5 is ON, I can stop with JOINs
+[[Node 2] main]: 2026/01/24 14:13:39 {39}. Sending JOIN to 1...
+[[Node 2] main]: 2026/01/24 14:13:39 {40}. 3 is ON, I can stop with JOINs
+[[Node 2] main]: 2026/01/24 14:13:39 {40}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{40}}, Address{{172.21.196.252 46002}}, Flags{1}
+[[Node 2] main]: 2026/01/24 14:13:39 {48}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Topology}, Timestamp{47}
+[[Node 2] main]: 2026/01/24 14:13:39 {51}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Topology}, Timestamp{50}
+[[Node 2] main]: 2026/01/24 14:13:39 {54}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{54}}, MessageType{0}, ElectionID{}, Round{0}, Body{[52-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {55}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{55}}, MessageType{0}, ElectionID{}, Round{0}, Body{[52-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {56}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{56}}, MessageType{0}, ElectionID{}, Round{0}, Body{[52-2]}
+[[Node 2] main]: 2026/01/24 14:13:39 {57}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{57}}, Address{{172.21.196.252 46002}}, Flags{2}
+[[Node 2] main]: 2026/01/24 14:13:39 {64}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{63}
+[[Node 2] main]: 2026/01/24 14:13:39 {70}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{69}
+[[Node 2] main]: 2026/01/24 14:13:39 {75}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{74}
+[[Node 2] main]: 2026/01/24 14:13:39 {76}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{75}
+[[Node 2] main]: 2026/01/24 14:13:39 {83}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{82}
+[[Node 2] main]: 2026/01/24 14:13:39 {86}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{85}
+[[Node 2] main]: 2026/01/24 14:13:39 {89}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{88}
+[[Node 2] main]: 2026/01/24 14:13:39 {92}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{91}
+[[Node 2] main]: 2026/01/24 14:13:40 {93}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{56}
+[[Node 2] main]: 2026/01/24 14:13:40 {93}. 1 is ON, I can stop with JOINs
+[[Node 2] main]: 2026/01/24 14:13:40 {97}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{96}
+[[Node 2] main]: 2026/01/24 14:13:41 {98}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{58}
+[[Node 2] main]: 2026/01/24 14:13:41 {99}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{61}
+[[Node 2] main]: 2026/01/24 14:13:41 {100}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{100}}}
+[[Node 2] main]: 2026/01/24 14:13:41 {101}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{101}}}
+[[Node 2] main]: 2026/01/24 14:13:41 {102}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{102}}}
+[[Node 2] main]: 2026/01/24 14:13:41 {107}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{106}
+[[Node 2] main]: 2026/01/24 14:13:41 {121}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{120}
+[[Node 2] main]: 2026/01/24 14:13:41 {123}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{122}
+[[Node 2] main]: 2026/01/24 14:13:41 {124}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{123}
+[[Node 2] main]: 2026/01/24 14:13:41 {125}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{124}
+[[Node 2] main]: 2026/01/24 14:13:41 {126}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{125}
+[[Node 2] main]: 2026/01/24 14:13:42 {131}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{131}}, MessageType{0}, ElectionID{}, Round{0}, Body{[59-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {132}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{132}}, MessageType{0}, ElectionID{}, Round{0}, Body{[59-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {133}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{133}}, MessageType{1}, ElectionID{59-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {134}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{134}}, MessageType{1}, ElectionID{59-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {135}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{135}}, MessageType{0}, ElectionID{}, Round{0}, Body{[61-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {136}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{136}}, MessageType{0}, ElectionID{}, Round{0}, Body{[61-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {137}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{137}}, MessageType{1}, ElectionID{61-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {138}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{138}}, MessageType{1}, ElectionID{61-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {139}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{139}}, MessageType{0}, ElectionID{}, Round{0}, Body{[78-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {140}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{140}}, MessageType{0}, ElectionID{}, Round{0}, Body{[78-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {141}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{141}}, MessageType{1}, ElectionID{78-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {142}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{142}}, MessageType{1}, ElectionID{78-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {143}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{143}}, MessageType{0}, ElectionID{}, Round{0}, Body{[80-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {144}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{144}}, MessageType{0}, ElectionID{}, Round{0}, Body{[80-1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {145}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{145}}, MessageType{1}, ElectionID{80-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {146}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{146}}, MessageType{1}, ElectionID{80-1}, Round{0}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {149}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{148}
+[[Node 2] main]: 2026/01/24 14:13:42 {150}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{149}
+[[Node 2] main]: 2026/01/24 14:13:42 {153}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{152}
+[[Node 2] main]: 2026/01/24 14:13:42 {154}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{153}
+[[Node 2] main]: 2026/01/24 14:13:42 {155}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{152}
+[[Node 2] main]: 2026/01/24 14:13:42 {156}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{156}}, MessageType{2}, ElectionID{80-1}, Round{0}, Body{[true false]}
+[[Node 2] main]: 2026/01/24 14:13:42 {157}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{154}
+[[Node 2] main]: 2026/01/24 14:13:42 {160}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{159}
+[[Node 2] main]: 2026/01/24 14:13:42 {161}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{161}}, MessageType{1}, ElectionID{80-1}, Round{1}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {168}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{167}
+[[Node 2] main]: 2026/01/24 14:13:42 {169}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{169}}, MessageType{2}, ElectionID{80-1}, Round{1}, Body{[true false]}
+[[Node 2] main]: 2026/01/24 14:13:42 {172}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{171}
+[[Node 2] main]: 2026/01/24 14:13:42 {173}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{173}}, MessageType{1}, ElectionID{80-1}, Round{2}, Body{[1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {176}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{175}
+[[Node 2] main]: 2026/01/24 14:13:42 {177}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{177}}, MessageType{2}, ElectionID{80-1}, Round{2}, Body{[true false]}
+[[Node 2] main]: 2026/01/24 14:13:42 {180}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{179}
+[[Node 2] main]: 2026/01/24 14:13:42 {181}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{181}}, MessageType{2}, ElectionID{80-1}, Round{3}, Body{[true true]}
+[[Node 2] main]: 2026/01/24 14:13:42 {184}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Election}, Timestamp{183}
+[[Node 2] main]: 2026/01/24 14:13:42 {185}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Election}, Timestamp{185}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 A true]}
+[[Node 2] main]: 2026/01/24 14:13:42 {186}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{186}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 Q 1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {187}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Election}, Timestamp{187}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 Q 1]}
+[[Node 2] main]: 2026/01/24 14:13:42 {192}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{191}
+[[Node 2] main]: 2026/01/24 14:13:42 {193}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Election}, Timestamp{189}
+[[Node 2] main]: 2026/01/24 14:13:42 {194}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Election}, Timestamp{192}
+[[Node 2] main]: 2026/01/24 14:13:42 {195}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Tree}, Timestamp{190}
+[[Node 2] main]: 2026/01/24 14:13:42 {196}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{192}
+[[Node 2] main]: 2026/01/24 14:13:42 {197}. Message sent to 3: Header{Sender{node-2}, Destination{node-3}, Type{Election}, Timestamp{197}}, MessageType{3}, ElectionID{80-1}, Round{4}, Body{[1 A false]}
+[[Node 2] main]: 2026/01/24 14:13:42 {198}. Message sent to 1: Header{Sender{node-2}, Destination{node-1}, Type{Tree}, Timestamp{198}}, Epoch{0}, Flags{32}, Body{[5]}
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{199}}, Epoch{0}, Flags{64}, Body{[50002]}
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 2
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 1
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 4
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 5
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 3
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 12
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 14
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 13
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 15
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 6
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 7
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 10
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering sync callback for 11
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 9
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering callback for 8
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Registering warmup callback
+[[Node 2] main]: 2026/01/24 14:13:42 {199}. Done registering
+[[Node 2] main]: 2026/01/24 14:13:42 {203}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{202}
+[[Node 2] main]: 2026/01/24 14:13:43 {204}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{204}}}
+[[Node 2] main]: 2026/01/24 14:13:43 {205}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{205}}}
+[[Node 2] main]: 2026/01/24 14:13:43 {206}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{206}}}
+[[Node 2] main]: 2026/01/24 14:13:43 {209}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{208}
+[[Node 2] main]: 2026/01/24 14:13:44 {210}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{208}
+[[Node 2] main]: 2026/01/24 14:13:44 {217}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{216}
+[[Node 2] main]: 2026/01/24 14:13:44 {218}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{218}}, Epoch{0}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:44 {221}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{220}
+[[Node 2] main]: 2026/01/24 14:13:45 {222}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{222}}}
+[[Node 2] main]: 2026/01/24 14:13:45 {223}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{223}}}
+[[Node 2] main]: 2026/01/24 14:13:45 {224}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{224}}}
+[[Node 2] main]: 2026/01/24 14:13:45 {227}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{226}
+[[Node 2] main]: 2026/01/24 14:13:46 {228}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{224}
+[[Node 2] main]: 2026/01/24 14:13:46 {234}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{233}
+[[Node 2] main]: 2026/01/24 14:13:46 {235}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{235}}, Epoch{1}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:46 {241}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{240}
+[[Node 2] main]: 2026/01/24 14:13:47 {242}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{242}}}
+[[Node 2] main]: 2026/01/24 14:13:47 {243}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{243}}}
+[[Node 2] main]: 2026/01/24 14:13:47 {244}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{244}}}
+[[Node 2] main]: 2026/01/24 14:13:47 {246}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{245}
+[[Node 2] main]: 2026/01/24 14:13:48 {247}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{246}
+[[Node 2] main]: 2026/01/24 14:13:48 {255}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{254}
+[[Node 2] main]: 2026/01/24 14:13:48 {256}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{256}}, Epoch{2}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:48 {259}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{258}
+[[Node 2] main]: 2026/01/24 14:13:49 {260}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{260}}}
+[[Node 2] main]: 2026/01/24 14:13:49 {261}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{261}}}
+[[Node 2] main]: 2026/01/24 14:13:49 {262}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{262}}}
+[[Node 2] main]: 2026/01/24 14:13:49 {265}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{264}
+[[Node 2] main]: 2026/01/24 14:13:50 {266}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{262}
+[[Node 2] main]: 2026/01/24 14:13:50 {274}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{273}
+[[Node 2] main]: 2026/01/24 14:13:50 {275}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{275}}, Epoch{3}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:50 {277}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{276}
+[[Node 2] main]: 2026/01/24 14:13:51 {278}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{278}}}
+[[Node 2] main]: 2026/01/24 14:13:51 {279}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{279}}}
+[[Node 2] main]: 2026/01/24 14:13:51 {280}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{280}}}
+[[Node 2] main]: 2026/01/24 14:13:51 {285}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{284}
+[[Node 2] main]: 2026/01/24 14:13:52 {286}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{280}
+[[Node 2] main]: 2026/01/24 14:13:52 {291}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{290}
+[[Node 2] main]: 2026/01/24 14:13:52 {292}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{292}}, Epoch{4}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:52 {295}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{294}
+[[Node 2] main]: 2026/01/24 14:13:53 {296}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{296}}}
+[[Node 2] main]: 2026/01/24 14:13:53 {297}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{297}}}
+[[Node 2] main]: 2026/01/24 14:13:53 {298}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{298}}}
+[[Node 2] main]: 2026/01/24 14:14:11 {301}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{300}
+[[Node 2] main]: 2026/01/24 14:13:53 {302}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{298}
+[[Node 2] main]: 2026/01/24 14:13:54 {310}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{309}
+[[Node 2] main]: 2026/01/24 14:13:54 {311}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{311}}, Epoch{5}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:54 {313}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{312}
+[[Node 2] main]: 2026/01/24 14:13:54 {314}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{314}}}
+[[Node 2] main]: 2026/01/24 14:13:54 {315}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{315}}}
+[[Node 2] main]: 2026/01/24 14:13:54 {316}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{316}}}
+[[Node 2] main]: 2026/01/24 14:13:55 {320}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{319}
+[[Node 2] main]: 2026/01/24 14:13:55 {321}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{316}
+[[Node 2] main]: 2026/01/24 14:13:56 {328}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{327}
+[[Node 2] main]: 2026/01/24 14:13:56 {329}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{329}}, Epoch{6}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:56 {332}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{331}
+[[Node 2] main]: 2026/01/24 14:13:56 {333}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{333}}}
+[[Node 2] main]: 2026/01/24 14:13:56 {334}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{334}}}
+[[Node 2] main]: 2026/01/24 14:13:56 {335}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{335}}}
+[[Node 2] main]: 2026/01/24 14:13:57 {338}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{337}
+[[Node 2] main]: 2026/01/24 14:13:57 {339}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{335}
+[[Node 2] main]: 2026/01/24 14:13:58 {347}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{346}
+[[Node 2] main]: 2026/01/24 14:13:58 {348}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{348}}, Epoch{7}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:58 {351}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{350}
+[[Node 2] main]: 2026/01/24 14:13:58 {352}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{352}}}
+[[Node 2] main]: 2026/01/24 14:13:58 {353}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{353}}}
+[[Node 2] main]: 2026/01/24 14:13:58 {354}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{354}}}
+[[Node 2] main]: 2026/01/24 14:13:58 {357}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{356}
+[[Node 2] main]: 2026/01/24 14:13:59 {358}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{354}
+[[Node 2] main]: 2026/01/24 14:13:59 {366}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{365}
+[[Node 2] main]: 2026/01/24 14:13:59 {367}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{367}}, Epoch{8}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:13:59 {370}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{369}
+[[Node 2] main]: 2026/01/24 14:14:00 {371}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{371}}}
+[[Node 2] main]: 2026/01/24 14:14:00 {372}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{372}}}
+[[Node 2] main]: 2026/01/24 14:14:00 {373}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{373}}}
+[[Node 2] main]: 2026/01/24 14:14:00 {376}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{375}
+[[Node 2] main]: 2026/01/24 14:14:01 {377}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{373}
+[[Node 2] main]: 2026/01/24 14:14:01 {385}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{384}
+[[Node 2] main]: 2026/01/24 14:14:01 {386}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{386}}, Epoch{9}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:01 {389}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{388}
+[[Node 2] main]: 2026/01/24 14:14:02 {390}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{390}}}
+[[Node 2] main]: 2026/01/24 14:14:02 {391}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{391}}}
+[[Node 2] main]: 2026/01/24 14:14:02 {392}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{392}}}
+[[Node 2] main]: 2026/01/24 14:14:02 {395}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{394}
+[[Node 2] main]: 2026/01/24 14:14:03 {396}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{392}
+[[Node 2] main]: 2026/01/24 14:14:03 {404}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{403}
+[[Node 2] main]: 2026/01/24 14:14:03 {405}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{405}}, Epoch{10}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:03 {408}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{407}
+[[Node 2] main]: 2026/01/24 14:14:04 {409}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{409}}}
+[[Node 2] main]: 2026/01/24 14:14:04 {410}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{410}}}
+[[Node 2] main]: 2026/01/24 14:14:04 {411}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{411}}}
+[[Node 2] main]: 2026/01/24 14:14:04 {414}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{413}
+[[Node 2] main]: 2026/01/24 14:14:05 {415}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{411}
+[[Node 2] main]: 2026/01/24 14:14:05 {422}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{421}
+[[Node 2] main]: 2026/01/24 14:14:05 {423}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{423}}, Epoch{11}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:05 {426}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{425}
+[[Node 2] main]: 2026/01/24 14:14:06 {427}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{427}}}
+[[Node 2] main]: 2026/01/24 14:14:06 {428}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{428}}}
+[[Node 2] main]: 2026/01/24 14:14:06 {429}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{429}}}
+[[Node 2] main]: 2026/01/24 14:14:06 {432}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{431}
+[[Node 2] main]: 2026/01/24 14:14:07 {433}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{429}
+[[Node 2] main]: 2026/01/24 14:14:07 {441}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{440}
+[[Node 2] main]: 2026/01/24 14:14:07 {442}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{442}}, Epoch{12}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:07 {445}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{444}
+[[Node 2] main]: 2026/01/24 14:14:08 {446}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{446}}}
+[[Node 2] main]: 2026/01/24 14:14:08 {447}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{447}}}
+[[Node 2] main]: 2026/01/24 14:14:08 {448}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{448}}}
+[[Node 2] main]: 2026/01/24 14:14:08 {449}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{448}
+[[Node 2] main]: 2026/01/24 14:14:09 {450}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{449}
+[[Node 2] main]: 2026/01/24 14:14:09 {458}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{457}
+[[Node 2] main]: 2026/01/24 14:14:09 {459}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{459}}, Epoch{13}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:09 {462}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{461}
+[[Node 2] main]: 2026/01/24 14:14:10 {463}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{463}}}
+[[Node 2] main]: 2026/01/24 14:14:10 {464}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{464}}}
+[[Node 2] main]: 2026/01/24 14:14:10 {465}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{465}}}
+[[Node 2] main]: 2026/01/24 14:14:10 {468}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{467}
+[[Node 2] main]: 2026/01/24 14:14:11 {469}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{465}
+[[Node 2] main]: 2026/01/24 14:14:11 {477}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{476}
+[[Node 2] main]: 2026/01/24 14:14:11 {478}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{478}}, Epoch{14}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:11 {481}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{480}
+[[Node 2] main]: 2026/01/24 14:14:12 {482}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{482}}}
+[[Node 2] main]: 2026/01/24 14:14:12 {483}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{483}}}
+[[Node 2] main]: 2026/01/24 14:14:12 {484}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{484}}}
+[[Node 2] main]: 2026/01/24 14:14:12 {487}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{486}
+[[Node 2] main]: 2026/01/24 14:14:13 {488}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{484}
+[[Node 2] main]: 2026/01/24 14:14:13 {495}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{494}
+[[Node 2] main]: 2026/01/24 14:14:13 {496}. Message sent to 5: Header{Sender{node-2}, Destination{node-5}, Type{Tree}, Timestamp{496}}, Epoch{15}, Flags{1}, Body{[]}
+[[Node 2] main]: 2026/01/24 14:14:13 {499}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{498}
+[[Node 2] main]: 2026/01/24 14:14:14 {500}. Message sent to 5: {Header{Sender{node-2}, Destination{node-5}, Type{Heartbeat}, Timestamp{500}}}
+[[Node 2] main]: 2026/01/24 14:14:14 {501}. Message sent to 3: {Header{Sender{node-2}, Destination{node-3}, Type{Heartbeat}, Timestamp{501}}}
+[[Node 2] main]: 2026/01/24 14:14:14 {502}. Message sent to 1: {Header{Sender{node-2}, Destination{node-1}, Type{Heartbeat}, Timestamp{502}}}
+[[Node 2] main]: 2026/01/24 14:14:14 {507}. Message received on dispatcher: 1, Sender{node-1}, Destination{node-2}, Type{Heartbeat}, Timestamp{506}
+[[Node 2] main]: 2026/01/24 14:14:15 {508}. Message received on dispatcher: 5, Sender{node-5}, Destination{node-2}, Type{Heartbeat}, Timestamp{502}
+[[Node 2] main]: 2026/01/24 14:14:15 {510}. Message received on dispatcher: 3, Sender{node-3}, Destination{node-2}, Type{Heartbeat}, Timestamp{509}

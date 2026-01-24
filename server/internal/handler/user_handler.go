@@ -121,16 +121,9 @@ func (u *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 }
-
-/**
- * GET  /users/{uuid}           GetUserByUUID, redirects to username, tag
- * GET  /users/{username}       ListUsersByName
- * GET  /users/{username}/{tag} GetUserByNameTag
- * DELETE /users/{uuid} oppure /users/{uuid}/{tag} SoftDeleteUser, if authorized
- *
- */
 
 func extractEpoch(v any) uint64 {
 	var x uint64

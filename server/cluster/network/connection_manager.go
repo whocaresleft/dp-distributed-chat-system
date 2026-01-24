@@ -20,9 +20,12 @@ import (
 	zmq "github.com/pebbe/zmq4"
 )
 
+// Prepends the prefix `tcp://` to address
 func getFullAddress(address string) string {
 	return fmt.Sprintf("tcp://%s", address)
 }
+
+// Removes the prexif `tcp://` from fullAddress
 func removePrefix(fullAddress string) string {
 	return strings.Split(fullAddress, "//")[1]
 }
@@ -66,6 +69,8 @@ func NewConnectionManager(id node.NodeId) (*ConnectionManager, error) {
 	}, nil
 }
 
+// StartMonitoring creates a monitor socket for this manager's socket, listening for
+// events suck as connect, disconnect and handshake. Calling a callback when an handshake is completed
 func (c *ConnectionManager) StartMonitoring(handshakeCallback func(string)) {
 
 	monitorAddress := fmt.Sprintf("inproc://monitor-socket-%s", c.GetIdentity())
@@ -88,6 +93,7 @@ func (c *ConnectionManager) StartMonitoring(handshakeCallback func(string)) {
 	}()
 }
 
+// Bind binds the socket on the given port
 func (c *ConnectionManager) Bind(port uint16) error {
 	if err := c.socket.Bind(fmt.Sprintf("tcp://*:%d", port)); err != nil {
 		return fmt.Errorf("Could not bind the socket on port %d", port)
@@ -95,17 +101,20 @@ func (c *ConnectionManager) Bind(port uint16) error {
 	return nil
 }
 
+// GetOutboundIP Returns the IP address used on this node, probably the local one
 func GetOutboundIP() string {
 	conn, _ := net.Dial("udp", "8.8.8.8:80")
 	defer conn.Close()
 	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
 
+// GetIdentity Returns the identity of the socket
 func (c *ConnectionManager) GetIdentity() string {
 	i, _ := c.socket.GetIdentity()
 	return i
 }
 
+// ConnectTo Connects to address, enstablishing a connection
 func (c *ConnectionManager) ConnectTo(address string) error {
 	fullAddr := getFullAddress(address)
 
@@ -116,6 +125,7 @@ func (c *ConnectionManager) ConnectTo(address string) error {
 	return nil
 }
 
+// DisconnectFrom Closes the connection with address
 func (c *ConnectionManager) DisconnectFrom(address string) error {
 	fullAddr := getFullAddress(address)
 
@@ -126,6 +136,8 @@ func (c *ConnectionManager) DisconnectFrom(address string) error {
 	return nil
 }
 
+// SwitchAddress Replaces the connection with old with one with new.
+// When successful error is nil
 func (c *ConnectionManager) SwitchAddress(old, new string) error {
 	if err := c.ConnectTo(new); err != nil {
 		return fmt.Errorf("Error during address switch: %s", err.Error())
@@ -137,6 +149,8 @@ func (c *ConnectionManager) SwitchAddress(old, new string) error {
 	return nil
 }
 
+// SendTo sends payload to the connected peer, identified by id.
+// When successful error is nil
 func (c *ConnectionManager) SendTo(id string, payload []byte) error {
 	_, err := c.socket.SendMessage(id, "", payload)
 	if err != nil {
@@ -145,6 +159,9 @@ func (c *ConnectionManager) SendTo(id string, payload []byte) error {
 	return nil
 }
 
+// Recv receives a [][]byte message on the socket, and returns it.
+// When successful in receiving, error is nil.
+// When socket times out, error is ErrRecvNotReady
 func (c *ConnectionManager) Recv() ([][]byte, error) {
 	msg, err := c.socket.RecvMessageBytes(zmq.DONTWAIT)
 	if err != nil {
@@ -156,6 +173,11 @@ func (c *ConnectionManager) Recv() ([][]byte, error) {
 	return msg, nil
 }
 
+// Poll waits for an amount of time, timeout, for an event to occur.
+// The registered event is POLLIN (messages incoming).
+// nil is returned when a message is ready to be recv'd
+// ErrRecvNotReady when the poll times out, but IT IS NOT BAD, IT IS A GOOD ERROR
+// If there is any other error, a serious problem (network scope) occurred
 func (c *ConnectionManager) Poll(timeout time.Duration) error {
 	sockets, err := c.poller.Poll(timeout)
 	if err != nil {
@@ -167,13 +189,16 @@ func (c *ConnectionManager) Poll(timeout time.Duration) error {
 	return nil
 }
 
+// Destroy closes the current socket
 func (c *ConnectionManager) Destroy() {
 	c.socket.Close()
 	c.ctx.Term()
 }
 
+// Error used for when the poll and recv failed, but not maliciously (they only timed out)
 var ErrRecvNotReady = errors.New("No data is avaiable to recv() on the socket")
 
+// isRecvNotReadyError tells wheter the error err is ErrRecvNotReady
 func isRecvNotReadyError(err error) bool {
 	var errno zmq.Errno
 	if errors.As(err, &errno) {

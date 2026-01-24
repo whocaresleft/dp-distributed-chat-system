@@ -1,0 +1,75 @@
+[[Node 2] tree]: 2026/01/24 14:13:39 {0}. Started tree handle
+[[Node 2] tree]: 2026/01/24 14:13:42 {126}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. 1 My state is Idle.
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Setting up spanning tree process, im IDLE and received a message
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Root{false}, Parent{sender:1}, TreeChildren{map[]}
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Sent yes to 1. Counter = 1
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Other neighbors, sending Q's
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Sent Q to 3
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Sent Q to 5
+[[Node 2] tree]: 2026/01/24 14:13:42 {184}. Awaiting responses... Becoming ACTIVE
+[[Node 2] tree]: 2026/01/24 14:13:42 {195}. 3 My state is Active.
+[[Node 2] tree]: 2026/01/24 14:13:42 {195}. Received Q leader message from 3. Sending NO
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. 5 My state is Active.
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. Received YES from 5, adding to tree neighbors. Current counter{2}
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. Awaiting -1 responses... [5 3 1]
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. 3 My state is Active.
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. Received NO from 3, just increasing counter {3}
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. Awaiting 0 responses... [5 3 1]
+[[Node 2] tree]: 2026/01/24 14:13:42 {196}. No more neighbors to await, becoming DONE. My roles: {Persistence (R)}
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Message from 5 received: Header{Sender{node-5}, Destination{node-2}, Type{Tree}, Timestamp{190}}, Epoch{0}, Flags{32}, Body{[5]}
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. (5) told me that (5) is reachable through itself. Current map{map[5:5]}
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Forwarding (5) next input hop to parent (1)
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{192}}, Epoch{0}, Flags{64}, Body{[50001]}
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Parent (1) said he listens on port (50001) for data plane
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Sending (5) the port (50002)
+[[Node 2] tree]: 2026/01/24 14:13:42 {197}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:44 {217}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{216}}, Epoch{0}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:44 {217}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:44 {217}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:46 {234}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{233}}, Epoch{1}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:46 {234}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:46 {234}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:48 {255}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{254}}, Epoch{2}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:48 {255}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:48 {255}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:50 {274}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{273}}, Epoch{3}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:50 {274}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:50 {274}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:52 {291}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{290}}, Epoch{4}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:52 {291}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:52 {291}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:54 {310}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{309}}, Epoch{5}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:54 {310}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:54 {310}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:56 {328}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{327}}, Epoch{6}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:56 {328}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:56 {328}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:58 {347}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{346}}, Epoch{7}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:58 {347}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:58 {347}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:13:59 {366}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{365}}, Epoch{8}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:13:59 {366}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:13:59 {366}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:01 {385}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{384}}, Epoch{9}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:01 {385}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:01 {385}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:03 {404}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{403}}, Epoch{10}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:03 {404}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:03 {404}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:05 {422}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{421}}, Epoch{11}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:05 {422}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:05 {422}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:07 {441}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{440}}, Epoch{12}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:07 {441}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:07 {441}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:09 {458}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{457}}, Epoch{13}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:09 {458}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:09 {458}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:11 {477}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{476}}, Epoch{14}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:11 {477}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:11 {477}. Awaiting tree message...
+[[Node 2] tree]: 2026/01/24 14:14:13 {495}. Message from 1 received: Header{Sender{node-1}, Destination{node-2}, Type{Tree}, Timestamp{494}}, Epoch{15}, Flags{1}, Body{[]}
+[[Node 2] tree]: 2026/01/24 14:14:13 {495}. Forwarded message to (5)
+[[Node 2] tree]: 2026/01/24 14:14:13 {495}. Awaiting tree message...

@@ -1,7 +1,6 @@
 package data
 
 import (
-	"fmt"
 	"server/internal/entity"
 	"server/internal/repository"
 	"sync/atomic"
@@ -9,15 +8,17 @@ import (
 	"gorm.io/gorm"
 )
 
+// Storage manager gathers all the repositories needed for the chat system in a single container.
 type StorageManager struct {
-	db *gorm.DB
+	db *gorm.DB // Under the hood we use the SQLite implementation
 
-	cacheEpoch atomic.Uint64
+	cacheEpoch atomic.Uint64 // Epoch of the system, stored in cache, to speed up reads without accessing the DB each time
 
+	// Repositories
 	systemRepo  repository.GlobalRepository
 	userRepo    repository.UserRepository
-	groupRepo   repository.GroupRepository
 	messageRepo repository.MessageRepository
+	groupRepo   repository.GroupRepository
 }
 
 func NewStorageManager(db *gorm.DB) *StorageManager {
@@ -29,6 +30,7 @@ func NewStorageManager(db *gorm.DB) *StorageManager {
 	s.systemRepo = repository.NewSQLiteGlobalRepository(db)
 	s.userRepo = repository.NewSQLiteUserRepository(db)
 	s.messageRepo = repository.NewSQLiteMessageRepository(db)
+	s.groupRepo = repository.NewSQLiteGroupRepository(db)
 
 	state, err := s.systemRepo.GetSystemState()
 	if err != nil {
@@ -38,8 +40,6 @@ func NewStorageManager(db *gorm.DB) *StorageManager {
 	} else {
 		s.cacheEpoch.Store(state.CurrentEpoch)
 	}
-
-	fmt.Print("I HAVE ", s.cacheEpoch.Load())
 
 	return s
 }

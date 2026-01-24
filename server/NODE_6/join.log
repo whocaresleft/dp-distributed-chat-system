@@ -1,0 +1,17 @@
+[[Node 6] join]: 2026/01/24 14:13:37 {0}. Started join handle
+[[Node 6] join]: 2026/01/24 14:13:38 {1}. Awaiting join message...
+[[Node 6] join]: 2026/01/24 14:13:39 {17}. Join message received: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{16}}, Address{{172.21.196.252 46001}}, Flags{1}
+[[Node 6] join]: 2026/01/24 14:13:39 {17}. 1 sent a JOIN message: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{16}}, Address{{172.21.196.252 46001}}, Flags{1}
+[[Node 6] join]: 2026/01/24 14:13:39 {17}. Awaiting join message...
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. Join message received: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{44}}, Address{{172.21.196.252 46001}}, Flags{3}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 sent a JOIN-ACK message: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{44}}, Address{{172.21.196.252 46001}}, Flags{3}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 is ON from JOIN-ACK. A{map[]} AJ{map[]}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. Awaiting join message...
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. Join message received: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{46}}, Address{{172.21.196.252 46001}}, Flags{3}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 sent a JOIN-ACK message: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{46}}, Address{{172.21.196.252 46001}}, Flags{3}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 is ON from JOIN-ACK. A{map[]} AJ{map[]}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. Awaiting join message...
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. Join message received: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{49}}, Address{{172.21.196.252 46001}}, Flags{2}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 sent a ACK message: Header{Sender{node-1}, Destination{node-6}, Type{Topology}, Timestamp{49}}, Address{{172.21.196.252 46001}}, Flags{2}
+[[Node 6] join]: 2026/01/24 14:13:39 {50}. 1 is ON from ACK. A{map[]} AJ{map[]}
+[[Node 6] join]: 2026/01/24 14:13:39 {52}. Awaiting join message...

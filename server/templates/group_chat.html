@@ -1,0 +1,118 @@
+{{ template "base" .}}
+
+{{ define "refresher" }}
+<meta http-equiv="refresh" content="5">
+{{ end }}
+
+{{ define "content" }}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2>Group: {{ .Group.Name }}</h2>
+  <a href="/groups/{{ .Group.UUID }}/members" class="btn btn-outline-secondary btn-sm">Members</a>
+</div>
+
+<div class="chat-container">
+  <div id="messages">
+    {{ $lastDate := "" }}
+    {{ range .Messages }}
+    {{ $currentDate := .CreatedAt.Format "02/01/2006" }}
+
+    {{ if ne $currentDate $lastDate }}
+    <div class="date-divider">
+      <span>{{ $currentDate }}</span>
+    </div>
+    {{ $lastDate = $currentDate }}
+    {{ end }}
+
+    {{ if ne .SenderUUID $.LoggedUserUUID }}
+    {{ $author := index $.Partecipants .SenderUUID }}
+    <div class="message-card received">
+      <span class="message-author">{{ $author.User }}#{{ $author.Tag }}</span>
+      <div class="message-text">{{ .Content }}</div>
+      <span class="message-time">{{ .CreatedAt.Format "15:04" }}</span>
+    </div>
+    {{ else }}
+    <div class="message-card sent">
+      <div class="message-text">{{ .Content }}</div>
+      <span class="message-author">{{ $.LoggedUser }}#{{ $.LoggedTag }}</span>
+      <span class="message-time">{{ .CreatedAt.Format "15:04" }}</span>
+    </div>
+    {{ end }}
+    {{ end }}
+  </div>
+</div>
+
+<form id="send-msg-form" class="mt-3">
+  <div class="input-group">
+    <input type="text" name="msg-to-send" id="msg-to-send" class="form-control" placeholder="Message the group..." required>
+    <button type="submit" class="btn btn-primary">Send</button>
+  </div>
+</form>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+    window.onbeforeunload = function() {
+        localStorage.setItem("chat-scroll", document.getElementById('messages').scrollTop);
+    };
+
+  window.onload = function() {
+    const container = document.getElementById('messages');
+    const scrollPos = localStorage.getItem("chat-scroll");
+    if (scrollPos) {
+      container.scrollTop = scrollPos
+    } else {
+      container.scrollTop = container.scrollHeight
+    }
+  }
+  const sendForm = document.getElementById('send-msg-form');
+  const inputField = document.getElementById('msg-to-send');
+  sendForm.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const content = inputField.value.trim();
+    if (!content) return;
+    try {
+      const response = await fetch(window.location.pathname, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          content: content
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        appendMessageToList(data);
+        inputField.value = '';
+      } else {
+        console.error("Server error:", response.status);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
+  });
+
+  function appendMessageToList(data) {
+    const msg = data.message;
+    const myName = data.myname;
+    const myTag = data.mytag;
+    const container = document.getElementById('messages');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message-card sent`;
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    msgDiv.innerHTML = `
+        <div class="message-text">${msg.content}</div>
+        <span class="message-author">${myName}#${myTag}</span>
+        <span class="message-time">${timeStr}</span>
+    `;
+    container.appendChild(msgDiv);
+    msgDiv.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end'
+    });
+  }
+</script>
+{{ end }}

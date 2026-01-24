@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package nameserver;
+option go_package = "./protocol";
+
+service Discovery {
+  rpc RegisterNode (NodeInfo) returns (NodeInfoResponse) {}
+}
+
+message NodeInfo {
+  string ip = 1; 
+  string port = 2;
+}
+
+message NodeInfoResponse {
+  bool success = 1;
+}

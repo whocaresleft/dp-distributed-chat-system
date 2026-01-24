@@ -16,21 +16,27 @@ import (
 	"time"
 )
 
+// NodeId is just uint64. Howerver it made it easier to have consistency (and not write uint or int64 by mistake)
 type NodeId uint64
 
+// Identifier returns a string that expresses this node's identity, using its id.
+// Returns node-<id>
 func (n NodeId) Identifier() string {
 	return fmt.Sprintf("node-%d", n)
 }
+
+// ExtractIdentifier is the opposite of identifier, it extracts the node id from a string that is `node-<id>`.
+// When succesful error is nil
 func ExtractIdentifier(identifier []byte) (NodeId, error) {
 	numBytes := bytes.TrimPrefix(identifier, []byte("node-"))
 	id, err := strconv.Atoi(string(numBytes))
 	return NodeId(id), err
 }
 
-var MinimumValidPort int = 46000
-var MaximumValidPort int = 65535
+const MinimumValidPort int = 46000 // Lower bound, useful to make sure we use ephimeral ports
+const MaximumValidPort int = 65535 // Port numbers are 16 bits, better to not go over
 
-// Checks if the given port is valid with respect with the minimum and maximum numbers allowed
+// IsPortValid checks if the given port is valid with respect with the minimum and maximum numbers allowed
 func IsPortValid(port int) error {
 	if port < MinimumValidPort || port > MaximumValidPort {
 		return fmt.Errorf("The port %d is outside valid range: [%d, %d]", port, MinimumValidPort, MaximumValidPort)
@@ -38,15 +44,18 @@ func IsPortValid(port int) error {
 	return nil
 }
 
+// Address is a wrapper around a couple (Host, Port)
 type Address struct {
 	Host string `json:"host"`
 	Port uint16 `json:"port"`
 }
 
+// NewAddress combines host and port into an Address
 func NewAddress(host string, port uint16) Address {
 	return Address{host, port}
 }
 
+// Clone returns a copy of the Address a
 func (a Address) Clone() Address {
 	return Address{
 		a.Host,
@@ -54,6 +63,8 @@ func (a Address) Clone() Address {
 	}
 }
 
+// ValidateAddress checks if the given address is valid or not, checking both hostname and port.
+// Returns nil when successful
 func ValidateAddress(address Address) error {
 	if net.ParseIP(address.Host) == nil {
 		return fmt.Errorf("The Host (%s) is not valid", address.Host)
@@ -64,14 +75,18 @@ func ValidateAddress(address Address) error {
 	return nil
 }
 
+// FullAddr combines the given host and port into the following string: `host:port`
 func FullAddr(host string, port uint16) string {
 	return fmt.Sprintf("%s:%d", host, port)
 }
 
+// FullAddr combines the host and port inside the given Address into a string `host:port`
 func (a Address) FullAddr() string {
 	return FullAddr(a.Host, a.Port)
 }
 
+// Connection is used by the data plane to be able to connect to other nodes, in the data plane.
+// A connection offers such support.
 type Connection interface {
 	GetIdentity() string
 	Bind(uint16) error
@@ -82,18 +97,12 @@ type Connection interface {
 	Poll(time.Duration) error
 }
 
+// HostFinder is used by the data plane to be able to retreive the Hostname of its "Data Plane Neighbors".
 type HostFinder interface {
 	GetHost(id NodeId) (string, error)
 }
 
-type RouteFinder interface {
-	GetLeader() NodeId
-	GetUpstreamPort() uint16
-	GetPersistenceNextHop() (NodeId, bool)
-	GetInputNextHop(target NodeId) (NodeId, bool)
-}
-
-// The Role of a node is an enum, it specifies what are the responsibilities of a particular node in the system
+// NodeRoleFlags is an enum, it specifies what are the responsibilities of a particular node in the system
 type NodeRoleFlags uint8
 
 const (
@@ -103,6 +112,7 @@ const (
 	RoleFlags_INPUT       NodeRoleFlags = 0b00000100 // Nodes that expose endpoints that clients can connect to (they host an HTTP server). They gather client requests and forward them to persistence nodes.
 )
 
+// String returns the readable role flags
 func (r NodeRoleFlags) String() string {
 	var s = "{"
 
@@ -119,7 +129,7 @@ func (r NodeRoleFlags) String() string {
 	}
 
 	if r&RoleFlags_INPUT > 0 {
-		s = fmt.Sprintf("%s Input", s)
+		s = fmt.Sprintf("%sInput", s)
 	}
 	return fmt.Sprintf("%s}", s)
 }

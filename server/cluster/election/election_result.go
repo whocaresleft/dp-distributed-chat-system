@@ -10,40 +10,40 @@ package election
 
 import (
 	"fmt"
-	election_definitions "server/cluster/election/definitions"
 	"server/cluster/node"
 )
 
-const RejoinLeaderTimeout = uint8(5)
-const StartoverLeaderTimeout = uint8(10)
+const RejoinLeaderTimeout = uint8(5)     //RejoinLeaderTimeout is the number of timeouts before probing the current leader
+const StartoverLeaderTimeout = uint8(10) //StartoverLeaderTimeout is the number of timeouts before starting a new election
 
-// A Post election context contains the node's information after the last election process.
+// ElectionResult contains the node's information after the last election process.
 // This is a stable election context, valid until a new election process is performed.
-// To read about the context of the current election process, go to `election_context.go, electionContext`.
-// These information includes: The role of the node, the leader's ID and the ID's of the persistence nodes.
+// To read about the context of the current election process, go to `election_context.go, ElectionContext`.
+// It stores the leader ID and the election ID
 type ElectionResult struct {
-	leaderId   node.NodeId // Id of the leader node.
-	electionId election_definitions.ElectionId
+	leaderId   node.NodeId // Id of the leader node
+	electionId ElectionId  // Id of the election the leader won
 }
 
-// Creates a context with the specified role and leader ID
-func NewElectionResult(leader node.NodeId, electionId election_definitions.ElectionId) *ElectionResult {
+// NewElectionResult creates a context with the specified leader and election IDs
+func NewElectionResult(leader node.NodeId, electionId ElectionId) *ElectionResult {
 	return &ElectionResult{
 		leaderId:   leader,
 		electionId: electionId,
 	}
 }
 
-// Returns the leader node's ID.
+// GetLeaderID returns the leader node's ID.
 func (e *ElectionResult) GetLeaderID() node.NodeId {
 	return e.leaderId
 }
 
-// Returns the election's ID.
-func (e *ElectionResult) GetElectionID() election_definitions.ElectionId {
+// GetElectionID returns the election's ID.
+func (e *ElectionResult) GetElectionID() ElectionId {
 	return e.electionId
 }
 
+// String returns the string representation of an ElectionResult
 func (e *ElectionResult) String() string {
 	return fmt.Sprintf("Election Result{LeaderID{%d}, ElectionID{%s}}", e.leaderId, e.electionId)
 }

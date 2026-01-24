@@ -15,6 +15,7 @@ import (
 	bootstrap_protocol "server/cluster/bootstrap/protocol"
 	"server/cluster/control"
 	"server/cluster/election"
+	nameserver_protocol "server/cluster/nameserver/protocol"
 	"server/cluster/network"
 	"server/cluster/nlog"
 	"server/cluster/node"
@@ -35,26 +36,27 @@ import (
 	"gorm.io/gorm"
 )
 
-// A Cluster Node represents a single node in the distributed system. It holds different components of the node together
+// Cluster Node represents a single node in the distributed system. It holds different components of the node together
+// It manages both the control plane and data plane, as well as the presentation layer for the HTTP servers
 type ClusterNode struct {
-	ready  atomic.Bool
-	config *internal.Config
+	ready  atomic.Bool      // Is node ready?
+	config *internal.Config // Config struct
 
-	ctx          context.Context
-	cancel       context.CancelFunc
-	logicalClock *node.LogicalClock
-	logger       *nlog.NodeLogger
+	ctx          context.Context    // Context
+	cancel       context.CancelFunc // Cancel functiony
+	logicalClock *node.LogicalClock // Logical clock
+	logger       *nlog.NodeLogger   // Logger component
 
-	controlMan  *control.ControlPlaneManager
-	dataEnvChan chan control.DataPlaneEnv
+	controlMan  *control.ControlPlaneManager // Control plane manager
+	dataEnvChan chan control.DataPlaneEnv    // Data plane envirovement channel, injected into the control plane manager
 
-	dataMan *data.DataPlaneManager
+	dataMan *data.DataPlaneManager // Data plane manager
 
-	inputMan   *input.InputManager
-	storageMan *data.StorageManager
+	inputMan   *input.InputManager  // Input manager
+	storageMan *data.StorageManager // Storage manager
 }
 
-// Creates a new cluster node with the given ID and on the given port
+// NewClusterNode creates a new cluster node with the given ID and on the given port
 // It returns a pointer to said node if no problems arise. Otherwise, the pointer is nil and an appropriate error is returned
 func NewClusterNode(cfg *internal.Config) (*ClusterNode, error) {
 
@@ -129,9 +131,6 @@ func NewClusterNode(cfg *internal.Config) (*ClusterNode, error) {
 	dm.SetLogger(dataLogger)
 	dm.SetClock(clock)
 
-	//im := input.NewInputManager()
-	//im.SetLogger(inputLogger)
-
 	logger.Logf("main", "Created context")
 	logger.Logf("main", "Node is all set")
 
@@ -151,6 +150,8 @@ func NewClusterNode(cfg *internal.Config) (*ClusterNode, error) {
 	}, nil
 }
 
+// DefaultContext sets a default context.
+// If successful, error is nil
 func (n *ClusterNode) DefaultContext() error {
 	if n.ready.Load() {
 		return fmt.Errorf("A context was already set...")
@@ -160,6 +161,8 @@ func (n *ClusterNode) DefaultContext() error {
 	return nil
 }
 
+// SetCustomContext injects a custom context with a cancel function.
+// If successful, error is nil
 func (n *ClusterNode) SetCustomContext(ctx context.Context, cancel context.CancelFunc) error {
 	if n.ready.Load() {
 		return fmt.Errorf("A context was already set...")
@@ -169,29 +172,37 @@ func (n *ClusterNode) SetCustomContext(ctx context.Context, cancel context.Cance
 	return nil
 }
 
+// EnableLogging enables the logger, making it so it writes to files again
 func (n *ClusterNode) EnableLogging() {
 	n.logger.EnableLogging()
 }
 
+// DisableLogging disables the logger, making it so it doesn't write to files
 func (n *ClusterNode) DisableLogging() {
 	n.logger.DisableLogging()
 }
 
-// Logs the given string. Wrap around logger.Printf
+// logf logs the given string. Wrap around logger.Printf
 func (n *ClusterNode) logf(filename, format string, a ...any) {
 	n.logger.Logf(filename, format, a...)
 }
 
-// Increments this node's logical clock and returns its value
+// IncrementClock increments this node's logical clock and returns its value
 func (n *ClusterNode) IncrementClock() uint64 {
 	return n.logicalClock.IncrementClock()
 }
 
-// Updates this node's logical clock based on the received one
+// UpdateClock updates this node's logical clock based on the received one
 func (n *ClusterNode) UpdateClock(received uint64) {
 	n.logicalClock.UpdateClock(received)
 }
 
+// Start is used to start every necessary component of the Cluster Node
+// If a config is not loaded or the node is not ready, an error is returned.
+// Otherwise, error is nil and the following are started:
+//   - Logger
+//   - Contron Plane Manager
+//   - Data Plane waiter (that then starts it later)
 func (n *ClusterNode) Start() error {
 	if !n.ready.Load() {
 		return fmt.Errorf("Node is not ready. Either the default or a custom context must be set.")
@@ -212,6 +223,9 @@ func (n *ClusterNode) Start() error {
 	return nil
 }
 
+// BootstrapDiscovery connects to a bootstrap server that tells the node who are his neighbors, and to what IP and PORT to connect to talk to them
+// on the control plane. If the gRPC to the bootstrap goes fine, a map of nodeId=>Address is retrieved, and is stored in the control plane so that it can
+// add then to the topology once the manager is ready. Also, if successful, error is nil
 func (n *ClusterNode) BootstrapDiscovery() error {
 	conn, err := grpc.NewClient(n.config.BootstrapServerAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -225,9 +239,9 @@ func (n *ClusterNode) BootstrapDiscovery() error {
 	defer cancel()
 
 	res, err := client.Register(ctx, &bootstrap_protocol.RegisterRequest{
-		Id:      uint64(n.getId()),
+		Id:      uint64(n.GetId()),
 		Address: network.GetOutboundIP(),
-		Port:    uint32(n.getControlPort()),
+		Port:    uint32(n.GetControlPort()),
 	})
 	if err != nil {
 		return err
@@ -246,6 +260,37 @@ func (n *ClusterNode) BootstrapDiscovery() error {
 	return nil
 }
 
+// NameServerRegister connects to a namerserver grpc to which this node registers itself (its ip and http port)
+func (n *ClusterNode) NameServerRegister() error {
+	n.logf("main", "Registering HTTP server %s:%s on the nameserver", network.GetOutboundIP(), n.config.HTTPServerPort)
+	conn, err := grpc.NewClient(n.config.NameserverAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := nameserver_protocol.NewDiscoveryClient(conn)
+
+	req := &nameserver_protocol.NodeInfo{
+		Ip:   network.GetOutboundIP(),
+		Port: n.config.HTTPServerPort,
+	}
+
+	ctx, cancel := context.WithTimeout(n.ctx, 5*time.Second)
+	defer cancel()
+
+	res, err := client.RegisterNode(ctx, req)
+	if err != nil {
+		return err
+	}
+	if res.Success {
+		return nil
+	}
+	return fmt.Errorf("Big oof")
+}
+
+// waitForDataEnv waits on a channel for a data env DTO by the control plane.
+// Once received, it will setup and start the data plane, alongside the other managers
 func (n *ClusterNode) waitForDataEnv(ctx context.Context) {
 
 	n.logf("data", "Started awaiting for Data Plane Envirovement config...")
@@ -263,14 +308,16 @@ func (n *ClusterNode) waitForDataEnv(ctx context.Context) {
 	}
 }
 
+// setupAndStartDataPlane uses the data plane env given by the control plane manager to correctly
+// set up the data plan and start it, alongside the input and storage managers, if necessary
 func (n *ClusterNode) setupAndStartDataPlane(ctx context.Context, env control.DataPlaneEnv) {
 
 	runtime := env.Runtime.Load()
 	roleFlags := runtime.GetRoles()
 	n.dataMan.Stop()
-	n.dataMan.SetRWPermissione(env.CanWrite, env.CanRead)
+	n.dataMan.SetRWPermissions(env.CanRead, env.CanWrite) // Update RW
 	if env.MakeBind {
-		dp := n.getDataPort()
+		dp := n.GetDataPort()
 		n.dataMan.BindPort(dp)
 		n.logf("data", "Binding port %d", dp)
 	}
@@ -280,25 +327,37 @@ func (n *ClusterNode) setupAndStartDataPlane(ctx context.Context, env control.Da
 	if roleFlags&node.RoleFlags_PERSISTENCE > 0 {
 		n.setupStorageManager()
 		n.dataMan.SetEpochCacher(n.storageMan)
-		userRepo := n.storageMan.GetUserRepository()
+
+		// Retrieve repos, to give to service
 		globalRepo := n.storageMan.GetGlobalRepository()
+		userRepo := n.storageMan.GetUserRepository()
 		messageRepo := n.storageMan.GetMessageRepository()
-		authService := service.NewLocalAuthService(env.CanWrite, userRepo, globalRepo, n.dataMan, dl)
-		userService := service.NewLocalUserService(env.CanWrite, userRepo, globalRepo, n.dataMan, dl)
-		messageService := service.NewLocalMessageService(env.CanWrite, messageRepo, globalRepo, n.dataMan, dl)
+		groupRepo := n.storageMan.GetGroupRepository()
+
+		// Setup services with local implementation
+		authService := service.NewLocalAuthService(env.CanWrite, userRepo, globalRepo, dl)
+		userService := service.NewLocalUserService(env.CanWrite, userRepo, globalRepo, dl)
+		messageService := service.NewLocalMessageService(env.CanWrite, messageRepo, globalRepo, dl)
+		groupService := service.NewLocalGroupService(env.CanWrite, groupRepo, userRepo, globalRepo, dl)
 
 		if env.CanWrite {
-			n.RegisterWriterCallbacks(authService, userService, messageService)
+			n.RegisterWriterCallbacks(authService, userService, messageService, groupService)
 		} else if env.CanRead {
-			n.RegisterReaderCallbacks(authService, userService, messageService)
+			n.RegisterReaderCallbacks(authService, userService, messageService, groupService)
+			n.dataMan.SendWarmupRequest() // We could be out of sync with writer
 		}
 	}
-
-	time.Sleep(6 * time.Second) // give it time, trust
 	if roleFlags&node.RoleFlags_INPUT > 0 {
+		time.Sleep(10 * time.Second) // Empirical, needs time
+
+		// Setup services with proxy implementation
 		authService := service.NewProxyAuthService(n.dataMan, dl)
 		userService := service.NewProxyUserService(n.dataMan, dl)
-		n.setupInputManager(authService, userService, ctx)
+		messageService := service.NewProxyMessageService(n.dataMan, dl)
+		groupService := service.NewproxyGroupService(n.dataMan, dl)
+
+		// Setup and start the input manager
+		n.setupInputManager(authService, userService, messageService, groupService, ctx)
 	} else {
 		n.logf("input", "I have to stop the HTTP server, no more input node.")
 		n.stopInputManager()
@@ -311,24 +370,33 @@ func (n *ClusterNode) setupAndStartDataPlane(ctx context.Context, env control.Da
 //  InputManager                                                              //
 //============================================================================//
 
-func (n *ClusterNode) setupInputManager(authService service.AuthService, userService service.UserService, ctx context.Context) {
+// setupInputManager sets the input manager up
+func (n *ClusterNode) setupInputManager(authService service.AuthService, userService service.UserService, messageService service.MessageService, groupService service.GroupService, ctx context.Context) {
+
 	if n.inputMan == nil {
-		n.inputMan = input.NewInputManager()
 		inputLogger, _ := n.logger.GetSubsystemLogger("input")
+		n.inputMan = input.NewInputManager()
 		n.inputMan.SetLogger(inputLogger)
+
+		n.NameServerRegister()
 	}
 	if n.inputMan.IsRunning() {
 		n.inputMan.SetPause(true)
 		n.inputMan.SetAuthService(authService)
 		n.inputMan.SetUserService(userService)
+		n.inputMan.SetMessageService(messageService)
+		n.inputMan.SetGroupService(groupService)
 		n.inputMan.SetPause(false)
 	} else {
 		n.inputMan.SetAuthService(authService)
 		n.inputMan.SetUserService(userService)
+		n.inputMan.SetMessageService(messageService)
+		n.inputMan.SetGroupService(groupService)
 		go n.inputMan.Run(ctx, n.getInputManagerConfig())
 	}
 }
 
+// stopInputManager stops the input manager
 func (n *ClusterNode) stopInputManager() {
 	n.logf("input", "do i stop? %v", n.inputMan != nil && n.inputMan.IsRunning())
 	if n.inputMan != nil && n.inputMan.IsRunning() {
@@ -337,6 +405,7 @@ func (n *ClusterNode) stopInputManager() {
 	}
 }
 
+// getInputManagerConfig returns a struct with input manager configuration
 func (n *ClusterNode) getInputManagerConfig() *input.IptConfig {
 	return &input.IptConfig{
 		ServerPort:        n.config.HTTPServerPort,
@@ -347,8 +416,10 @@ func (n *ClusterNode) getInputManagerConfig() *input.IptConfig {
 	}
 }
 
-func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service.UserService, ms service.MessageService) {
-	n.dataMan.RegisterRequestHandler(data.ActionUserRegister, func(msg *data.DataMessage) (*data.DataMessage, error) {
+// RegisterWriterCallbacks registers functions that handle the forwarder requests, by redirecting them to the appropriate service
+func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service.UserService, ms service.MessageService, gs service.GroupService) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserRegister)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserRegister, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var credentials map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &credentials); err != nil {
 			return nil, err
@@ -360,12 +431,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -381,7 +452,7 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "User with same credentials already exists"
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 		templResponse.Epoch = newEpoch
 
@@ -390,7 +461,8 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUserLogin, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserLogin)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserLogin, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var credentials map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &credentials); err != nil {
 			return nil, err
@@ -402,12 +474,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -423,7 +495,7 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -437,7 +509,8 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUserGetNameTag, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserGetNameTag)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserGetNameTag, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var searchTags map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &searchTags); err != nil {
 			return nil, err
@@ -448,12 +521,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -469,7 +542,7 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -483,18 +556,19 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUsersGetName, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUsersGetName)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUsersGetName, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 
 		username := string(msg.Payload)
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -506,7 +580,7 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -520,18 +594,19 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUserDelete, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserDelete)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserDelete, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 
 		uuid := string(msg.Payload)
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -543,7 +618,7 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "User with same credentials already exists"
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 		templResponse.Epoch = newEpoch
 
@@ -552,7 +627,8 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionMessageSend, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionMessageSend)
+	n.dataMan.RegisterRequestHandler(protocol.ActionMessageSend, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var params map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
 			return nil, err
@@ -564,12 +640,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -580,12 +656,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			return templResponse, nil
 		}
 
-		sentMsg, newEpoch, err := ms.CreateMessage(sender, receiver, content, msg.Epoch)
+		sentMsg, newEpoch, err := ms.CreateDMMessage(sender, receiver, content, msg.Epoch)
 		if err != nil {
 			templResponse.ErrorMessage = "User with same credentials already exists"
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 		templResponse.Epoch = newEpoch
 
@@ -594,7 +670,51 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionMessageRecv, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMessageSend)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMessageSend, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		var params map[string]string
+		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
+			return nil, err
+		}
+
+		sender, okS := params["sender"]
+		group, okR := params["receiver"]
+		content, okC := params["content"]
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		if !(okS && okR && okC) {
+			return templResponse, nil
+		}
+
+		sentMsg, newEpoch, err := ms.CreateGroupMessage(sender, group, content, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "User with same credentials already exists"
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+		templResponse.Epoch = newEpoch
+
+		templResponse.Payload, _ = json.Marshal(sentMsg)
+
+		return templResponse, nil
+
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionMessageRecv)
+	n.dataMan.RegisterRequestHandler(protocol.ActionMessageRecv, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var params map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
 			return nil, err
@@ -605,12 +725,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -621,12 +741,12 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 			return templResponse, nil
 		}
 
-		msgs, newEpoch, err := ms.Get(sender, receiver, msg.Epoch)
+		msgs, newEpoch, err := ms.GetDM(sender, receiver, msg.Epoch)
 		if err != nil {
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(msgs)
@@ -640,10 +760,323 @@ func (n *ClusterNode) RegisterWriterCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMessageRecv)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMessageRecv, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+
+		group := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		msgs, newEpoch, err := ms.GetGroup(group, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, err := json.Marshal(msgs)
+		if err != nil {
+			return nil, err
+		}
+
+		templResponse.Payload = payload
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupCreate)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupCreate, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+
+		var params struct {
+			GroupName string       `json:"group-name"`
+			Creator   *entity.User `json:"creator"`
+		}
+
+		err := json.Unmarshal(msg.Payload, &params)
+		if err != nil {
+			return nil, err
+		}
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		createdGroup, newEpoch, err := gs.CreateGroup(params.GroupName, params.Creator, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = err.Error()
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+		templResponse.Epoch = newEpoch
+
+		templResponse.Payload, _ = json.Marshal(createdGroup)
+
+		return templResponse, nil
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupDelete)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupDelete, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		groupUuid := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		newEpoch, err := gs.DeleteGroup(groupUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "User with same credentials already exists"
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+		templResponse.Epoch = newEpoch
+		copy(templResponse.Payload, msg.Payload)
+
+		return templResponse, nil
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMemberJoin)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMemberJoin, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		var params map[string]string
+		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
+			return nil, err
+		}
+
+		groupUuid, okG := params["group-uuid"]
+		userUuid, okU := params["user-uuid"]
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		if !(okG && okU) {
+			return templResponse, nil
+		}
+
+		newEpoch, err := gs.AddGroupUser(groupUuid, userUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+		templResponse.Epoch = newEpoch
+		copy(templResponse.Payload, msg.Payload)
+
+		return templResponse, nil
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMemberRemove)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMemberRemove, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		var params map[string]string
+		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
+			return nil, err
+		}
+
+		groupUuid, okG := params["group-uuid"]
+		userUuid, okU := params["user-uuid"]
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		if !(okG && okU) {
+			return templResponse, nil
+		}
+
+		newEpoch, err := gs.RemoveGroupUser(groupUuid, userUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+		copy(templResponse.Payload, msg.Payload)
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMembersGet)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMembersGet, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		groupUuid := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		members, newEpoch, err := gs.GetGroupMembers(groupUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, _ := json.Marshal(members)
+		templResponse.Payload = payload
+
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+	})
+
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupGetUUID)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupGetUUID, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		groupUuid := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		group, newEpoch, err := gs.GetGroupByUUID(groupUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, err := json.Marshal(group)
+		if err != nil {
+			return nil, err
+		}
+
+		templResponse.Payload = payload
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+	})
+
+	n.logf("main", "Registering snapshot callback")
+	n.dataMan.SetSnapshotCallback(func(req *protocol.DataMessage) (rep *protocol.DataMessage, err error) {
+		originalSender := req.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			req.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			req.Action,
+			"",
+			[]byte{},
+			req.Epoch,
+		)
+
+		users, err := n.storageMan.GetUserRepository().GetAll()
+		if err != nil {
+			templResponse.ErrorMessage = err.Error()
+			return templResponse, nil
+		}
+		messages, err := n.storageMan.GetMessageRepository().GetAll()
+		if err != nil {
+			templResponse.ErrorMessage = err.Error()
+			return templResponse, nil
+		}
+		groups, err := n.storageMan.GetGroupRepository().GetAll()
+
+		snapshot := struct {
+			Users    []*entity.User      `json:"users"`
+			Messages []*entity.Message   `json:"messages"`
+			Groups   []*entity.ChatGroup `json:"groups"`
+		}{
+			Users:    users,
+			Messages: messages,
+			Groups:   groups,
+		}
+
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, err := json.Marshal(snapshot)
+		if err != nil {
+			return nil, err
+		}
+
+		templResponse.Payload = payload
+		templResponse.Epoch = n.storageMan.GetCachedEpoch()
+		return templResponse, nil
+
+	})
+	n.logf("main", "Done registering")
 }
 
-func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service.UserService, ms service.MessageService) {
-	n.dataMan.RegisterRequestHandler(data.ActionUserLogin, func(msg *data.DataMessage) (*data.DataMessage, error) {
+// RegisterReaderCallbacks registers functions that handle the forwarder requests, and sync messages, by redirecting them to the appropriate service
+func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service.UserService, ms service.MessageService, gs service.GroupService) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserLogin)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserLogin, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var credentials map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &credentials); err != nil {
 			return nil, err
@@ -655,12 +1088,12 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -676,7 +1109,7 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -690,7 +1123,8 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterSyncHandler(data.ActionUserRegister, func(msg *data.DataMessage) error {
+	n.logf("main", "Registering sync callback for %d", protocol.ActionUserRegister)
+	n.dataMan.RegisterSyncHandler(protocol.ActionUserRegister, func(msg *protocol.DataMessage) error {
 		var user entity.User
 		if err := json.Unmarshal([]byte(msg.Payload), &user); err != nil {
 			return err
@@ -699,7 +1133,8 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 		_, err := n.storageMan.GetUserRepository().SynCreate(&user, msg.Epoch)
 		return err
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUserGetNameTag, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUserGetNameTag)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUserGetNameTag, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var searchTags map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &searchTags); err != nil {
 			return nil, err
@@ -710,12 +1145,12 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -731,7 +1166,7 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -745,18 +1180,19 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionUsersGetName, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering callback for %d", protocol.ActionUsersGetName)
+	n.dataMan.RegisterRequestHandler(protocol.ActionUsersGetName, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 
 		username := string(msg.Payload)
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -768,7 +1204,7 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(u)
@@ -782,22 +1218,35 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
-	n.dataMan.RegisterSyncHandler(data.ActionUserDelete, func(msg *data.DataMessage) error {
+	n.logf("main", "Registering sync callback for %d", protocol.ActionUserDelete)
+	n.dataMan.RegisterSyncHandler(protocol.ActionUserDelete, func(msg *protocol.DataMessage) error {
 		uuid := string(msg.Payload)
 
 		_, err := n.storageMan.GetUserRepository().SynSoftDelete(uuid, msg.Epoch)
 		return err
 	})
-	n.dataMan.RegisterSyncHandler(data.ActionMessageSend, func(msg *data.DataMessage) error {
+	n.logf("main", "Registering sync callback for %d", protocol.ActionMessageSend)
+	n.dataMan.RegisterSyncHandler(protocol.ActionMessageSend, func(msg *protocol.DataMessage) error {
 		var message entity.Message
-		if err := json.Unmarshal([]byte(msg.Payload), &message); err != nil {
+		if err := json.Unmarshal(msg.Payload, &message); err != nil {
 			return err
 		}
 
 		_, err := n.storageMan.GetMessageRepository().SynCreate(&message, msg.Epoch)
 		return err
 	})
-	n.dataMan.RegisterRequestHandler(data.ActionMessageRecv, func(msg *data.DataMessage) (*data.DataMessage, error) {
+	n.logf("main", "Registering sync callback for %d", protocol.ActionGroupMessageSend)
+	n.dataMan.RegisterSyncHandler(protocol.ActionGroupMessageSend, func(msg *protocol.DataMessage) error {
+		var message entity.Message
+		if err := json.Unmarshal(msg.Payload, &message); err != nil {
+			return err
+		}
+
+		_, err := n.storageMan.GetMessageRepository().SynCreate(&message, msg.Epoch)
+		return err
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionMessageRecv)
+	n.dataMan.RegisterRequestHandler(protocol.ActionMessageRecv, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
 		var params map[string]string
 		if err := json.Unmarshal([]byte(msg.Payload), &params); err != nil {
 			return nil, err
@@ -808,12 +1257,12 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 
 		originalSender := msg.OriginNode
 
-		templResponse := data.NewResponseMessage(
+		templResponse := protocol.NewResponseMessage(
 			n.NewMessageHeader(originalSender, protocol.Data),
 			msg.MessageID,
-			n.getId(),      // I am new origin
+			n.GetId(),      // I am new origin
 			originalSender, // Original sender is new final destination
-			data.FAILURE,
+			protocol.FAILURE,
 			msg.Action,
 			"Missing parameters",
 			[]byte{},
@@ -824,12 +1273,12 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 			return templResponse, nil
 		}
 
-		msgs, newEpoch, err := ms.Get(sender, receiver, msg.Epoch)
+		msgs, newEpoch, err := ms.GetDM(sender, receiver, msg.Epoch)
 		if err != nil {
 			templResponse.ErrorMessage = "Wrong credentials."
 			return templResponse, nil
 		}
-		templResponse.Status = data.SUCCESS
+		templResponse.Status = protocol.SUCCESS
 		templResponse.ErrorMessage = ""
 
 		payload, err := json.Marshal(msgs)
@@ -843,12 +1292,198 @@ func (n *ClusterNode) RegisterReaderCallbacks(as service.AuthService, us service
 		return templResponse, nil
 
 	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMessageRecv)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMessageRecv, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+
+		group := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		msgs, newEpoch, err := ms.GetGroup(group, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, err := json.Marshal(msgs)
+		if err != nil {
+			return nil, err
+		}
+
+		templResponse.Payload = payload
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+
+	})
+	n.logf("main", "Registering sync callback for %d", protocol.ActionGroupCreate)
+	n.dataMan.RegisterSyncHandler(protocol.ActionGroupCreate, func(msg *protocol.DataMessage) error {
+		var group entity.ChatGroup
+		err := json.Unmarshal(msg.Payload, &group)
+		if err != nil {
+			return err
+		}
+		_, err = n.storageMan.GetGroupRepository().SynCreate(&group, msg.Epoch)
+		return err
+	})
+	n.logf("main", "Registering sync callback for %d", protocol.ActionGroupDelete)
+	n.dataMan.RegisterSyncHandler(protocol.ActionGroupDelete, func(msg *protocol.DataMessage) error {
+		groupUuid := string(msg.Payload)
+
+		_, err := n.storageMan.GetGroupRepository().SynSoftDelete(groupUuid, msg.Epoch)
+		return err
+	})
+	n.logf("main", "Registering sync callback for %d", protocol.ActionGroupMemberJoin)
+	n.dataMan.RegisterSyncHandler(protocol.ActionGroupMemberJoin, func(msg *protocol.DataMessage) error {
+		var params map[string]string
+		if err := json.Unmarshal(msg.Payload, &params); err != nil {
+			return err
+		}
+
+		groupUuid, okG := params["group-uuid"]
+		userUuid, okU := params["user-uuid"]
+		if !(okG && okU) {
+			return fmt.Errorf("Malformatted payload")
+		}
+
+		user, err := n.storageMan.GetUserRepository().GetByUUID(userUuid)
+		if err != nil {
+			return err
+		}
+
+		_, err = n.storageMan.GetGroupRepository().SynAddUser(groupUuid, user, msg.Epoch)
+		return err
+	})
+	n.logf("main", "Registering sync callback for %d", protocol.ActionGroupMemberRemove)
+	n.dataMan.RegisterSyncHandler(protocol.ActionGroupMemberRemove, func(msg *protocol.DataMessage) error {
+		var params map[string]string
+		if err := json.Unmarshal(msg.Payload, &params); err != nil {
+			return err
+		}
+
+		groupUuid, okG := params["group-uuid"]
+		userUuid, okU := params["user-uuid"]
+		if !(okG && okU) {
+			return fmt.Errorf("Malformatted payload")
+		}
+
+		_, err := n.storageMan.GetGroupRepository().SynRemoveUser(groupUuid, userUuid, msg.Epoch)
+		return err
+	})
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupMembersGet)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupMembersGet, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		groupUuid := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		members, newEpoch, err := gs.GetGroupMembers(groupUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, _ := json.Marshal(members)
+		templResponse.Payload = payload
+
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+	})
+
+	n.logf("main", "Registering callback for %d", protocol.ActionGroupGetUUID)
+	n.dataMan.RegisterRequestHandler(protocol.ActionGroupGetUUID, func(msg *protocol.DataMessage) (*protocol.DataMessage, error) {
+		groupUuid := string(msg.Payload)
+
+		originalSender := msg.OriginNode
+
+		templResponse := protocol.NewResponseMessage(
+			n.NewMessageHeader(originalSender, protocol.Data),
+			msg.MessageID,
+			n.GetId(),      // I am new origin
+			originalSender, // Original sender is new final destination
+			protocol.FAILURE,
+			msg.Action,
+			"Missing parameters",
+			[]byte{},
+			msg.Epoch,
+		)
+
+		group, newEpoch, err := gs.GetGroupByUUID(groupUuid, msg.Epoch)
+		if err != nil {
+			templResponse.ErrorMessage = "Wrong credentials."
+			return templResponse, nil
+		}
+		templResponse.Status = protocol.SUCCESS
+		templResponse.ErrorMessage = ""
+
+		payload, err := json.Marshal(group)
+		if err != nil {
+			return nil, err
+		}
+
+		templResponse.Payload = payload
+		templResponse.Epoch = newEpoch
+
+		return templResponse, nil
+	})
+
+	n.logf("main", "Registering warmup callback")
+	n.dataMan.SetWarmupCallback(func(syn *protocol.DataMessage) error {
+
+		var snapshot struct {
+			Users    []*entity.User      `json:"users"`
+			Messages []*entity.Message   `json:"messages"`
+			Groups   []*entity.ChatGroup `json:"groups"`
+		}
+
+		if err := json.Unmarshal([]byte(syn.Payload), &snapshot); err != nil {
+			return err
+		}
+
+		if err := n.storageMan.GetGlobalRepository().SyncSnapshot(syn.Epoch, snapshot.Users, snapshot.Messages, snapshot.Groups); err != nil {
+			return err
+		}
+		n.storageMan.UpdateEpochCache(syn.Epoch)
+
+		return nil
+
+	})
+	n.logf("main", "Done registering")
 }
 
 //============================================================================//
 //  StorageManager                                                            //
 //============================================================================//
 
+// Starts the storage manager
 func (n *ClusterNode) setupStorageManager() {
 	if n.storageMan == nil {
 		db, err := gorm.Open(sqlite.Open(n.config.FolderPath+"/"+n.config.DBName), &gorm.Config{})
@@ -868,6 +1503,7 @@ func (n *ClusterNode) setupStorageManager() {
 	}
 }
 
+// getGlobalRepo returns the global repository of storage manager
 func (n *ClusterNode) getGlobalRepo() repository.GlobalRepository {
 	return n.storageMan.GetGlobalRepository()
 }
@@ -876,18 +1512,18 @@ func (n *ClusterNode) getGlobalRepo() repository.GlobalRepository {
 //  Wrappers for NodeConfig component                                         //
 //============================================================================//
 
-// Returns the ID of the node.
-func (n *ClusterNode) getId() node.NodeId {
+// GetId returns the ID of the node.
+func (n *ClusterNode) GetId() node.NodeId {
 	return node.NodeId(n.config.NodeId)
 }
 
-// Returns the port of the node used for the control plane.
-func (n *ClusterNode) getControlPort() uint16 {
+// GetControlPort returns the port of the node used for the control plane.
+func (n *ClusterNode) GetControlPort() uint16 {
 	return n.config.ControlPlanePort
 }
 
-// Returns the port of the node used for the data plane.
-func (n *ClusterNode) getDataPort() uint16 {
+// GetDataPort returns the port of the node used for the data plane.
+func (n *ClusterNode) GetDataPort() uint16 {
 	return n.config.DataPlanePort
 }
 
@@ -895,9 +1531,11 @@ func (n *ClusterNode) getDataPort() uint16 {
 //  Wrappers for Protocol component                                           //
 //============================================================================//
 
-func (n *ClusterNode) NewMessageHeader(dest node.NodeId, typ protocol.MessageType) *protocol.MessageHeader {
+// newMessageHeader creates a preconfigured message header for the given neighbor (destination) and type.
+// The timestamp field is empty, it will be automatically marked when Sent (for accuracy)
+func (n *ClusterNode) NewMessageHeader(dest node.NodeId, typ protocol.MessageScope) *protocol.MessageHeader {
 	return protocol.NewMessageHeader(
-		n.getId().Identifier(),
+		n.GetId().Identifier(),
 		dest.Identifier(),
 		typ,
 	)
