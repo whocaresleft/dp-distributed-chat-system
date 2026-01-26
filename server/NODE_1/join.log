@@ -1,9 +1,0 @@
-[[Node 1] join]: 2026/01/24 15:57:12 {0}. Started join handle
-[[Node 1] join]: 2026/01/24 15:57:12 {6}. Awaiting join message...
-[[Node 1] join]: 2026/01/24 15:57:12 {6}. Join message received: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{5}}, Address{{172.21.196.252 46002}}, Flags{1}
-[[Node 1] join]: 2026/01/24 15:57:12 {6}. 2 sent a JOIN message: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{5}}, Address{{172.21.196.252 46002}}, Flags{1}
-[[Node 1] join]: 2026/01/24 15:57:12 {6}. Awaiting join message...
-[[Node 1] join]: 2026/01/24 15:57:12 {10}. Join message received: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{9}}, Address{{172.21.196.252 46002}}, Flags{2}
-[[Node 1] join]: 2026/01/24 15:57:12 {10}. 2 sent a ACK message: Header{Sender{node-2}, Destination{node-1}, Type{Topology}, Timestamp{9}}, Address{{172.21.196.252 46002}}, Flags{2}
-[[Node 1] join]: 2026/01/24 15:57:12 {10}. 2 is ON from ACK. A{map[]} AJ{map[]}
-[[Node 1] join]: 2026/01/24 15:57:12 {12}. Awaiting join message...

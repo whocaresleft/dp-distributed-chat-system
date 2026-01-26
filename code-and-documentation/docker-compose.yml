@@ -1,0 +1,65 @@
+services:
+  # --- BOOTSTRAP ---
+  bootstrap:
+    build: .
+    image: my-zmq-app
+    container_name: zmq-bootstrap
+    command: ./bootstrap
+    ports:
+      - "45999:45999"
+    volumes:
+      - ./B0OTSTRAP:/app/B0OTSTRAP
+    networks:
+      - zmq-net
+
+  # --- NAMESERVER ---
+  nameservice:
+    image: my-zmq-app
+    container_name: zmq-nameservice
+    command: ./nameserver
+    ports:
+      - "9999:9999"
+    networks:
+      - zmq-net
+
+  # --- NODES ---
+  
+  node1:
+    image: my-zmq-app
+    container_name: zmq-node-1
+    command: ./node NODE_1
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./NODE_1:/app/NODE_1
+    networks:
+      - zmq-net
+    depends_on:
+      - nameservice
+      - bootstrap
+
+  node2:
+    image: my-zmq-app
+    container_name: zmq-node-2
+    command: ./node NODE_2
+    ports:
+      - "8082:8082"
+    volumes:
+      - ./NODE_2:/app/NODE_2
+    networks:
+      - zmq-net
+
+  node3:
+    image: my-zmq-app
+    container_name: zmq-node-3
+    command: ./node NODE_3
+    ports:
+      - "8083:8083"
+    volumes:
+      - ./NODE_3:/app/NODE_3
+    networks:
+      - zmq-net
+
+networks:
+  zmq-net:
+    driver: bridge

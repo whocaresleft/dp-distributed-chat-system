@@ -1,7 +1,0 @@
-[[Node 1] data]: 2026/01/24 15:57:12 {0}. Started awaiting for Data Plane Envirovement config...
-[[Node 1] data]: 2026/01/24 15:57:15 {29}. Received envirovement config{{true true true 0xc0002c5870}}
-[[Node 1] data]: 2026/01/24 15:57:15 {30}. Binding port 50001
-[[Node 1] data]: 2026/01/24 15:57:15 {30}. Started data plane manager
-[[Node 1] data]: 2026/01/24 15:57:15 {30}. Started message handle
-[[Node 1] data]: 2026/01/24 15:57:15 {30}. Started async sender
-[[Node 1] data]: 2026/01/24 15:57:15 {30}. Started async receiver

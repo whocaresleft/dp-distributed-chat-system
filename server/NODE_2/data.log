@@ -1,6 +1,0 @@
-[[Node 2] data]: 2026/01/24 15:57:12 {0}. Started awaiting for Data Plane Envirovement config...
-[[Node 2] data]: 2026/01/24 15:57:15 {31}. Received envirovement config{{false false false 0xc00026fae0}}
-[[Node 2] data]: 2026/01/24 15:57:25 {60}. Started data plane manager
-[[Node 2] data]: 2026/01/24 15:57:25 {60}. Started message handle
-[[Node 2] data]: 2026/01/24 15:57:25 {60}. Started async sender
-[[Node 2] data]: 2026/01/24 15:57:25 {60}. Started async receiver
